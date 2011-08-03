@@ -144,15 +144,22 @@ static zend_object_value weakref_object_new_ex(zend_class_entry *class_type, wea
 {
 	zend_object_value  retval;
 	weakref_object    *intern;
+
+#if PHP_VERSION_ID < 50399
 	zval              *tmp;
+#endif
 
 	intern = ecalloc(1, sizeof(weakref_object));
 
 	*obj = intern;
 
 	zend_object_std_init(&intern->std, class_type TSRMLS_CC);
-	zend_hash_copy(intern->std.properties, &class_type->default_properties, (copy_ctor_func_t) zval_add_ref, (void *) &tmp, sizeof(zval *));
 
+#if PHP_VERSION_ID >= 50399
+	object_properties_init(&intern->std, class_type);
+#else
+	zend_hash_copy(intern->std.properties, &class_type->default_properties, (copy_ctor_func_t) zval_add_ref, (void *) &tmp, sizeof(zval *));
+#endif
 
 	if (clone_orig && orig) {
 		weakref_object *other = (weakref_object *)zend_object_store_get_object(orig TSRMLS_CC);
