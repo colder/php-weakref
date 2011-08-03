@@ -3,5 +3,5 @@
 ARG_ENABLE("weakref", "Weakref support", "no");
 
 if (PHP_WEAKREF != "no") {
-	EXTENSION("waekref", "weakref.c");
+	EXTENSION("waekref", "weakref.c", PHP_WEAKREF_SHARED);
 }
