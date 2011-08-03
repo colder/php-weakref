@@ -24,6 +24,7 @@
 
 #include "php.h"
 #include "zend_exceptions.h"
+#include "ext/standard/info.h"
 #include "weakref.h"
 
 static void weakref_store_init(TSRMLS_D) {
