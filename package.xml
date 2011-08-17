@@ -21,8 +21,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <api>0.1.0</api>
  </version>
  <stability>
-  <release>alpha</release>
-  <api>alpha</api>
+  <release>beta</release>
+  <api>beta</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
@@ -53,19 +53,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <extsrcrelease/>
  <changelog>
   <release>
-   <stability><release>alpha</release><api>alpha</api></stability>
+   <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.1.0</release><api>0.1.0</api></version>
    <date>2011-08-18</date>
    <notes>
 - First release.
-   </notes>
-  </release>
-  <release>
-   <stability><release>alpha</release><api>alpha</api></stability>
-   <version><release>0.0.1</release><api>0.0.1</api></version>
-   <date>2011-08-18</date>
-   <notes>
-- First bogus release.
    </notes>
   </release>
  </changelog>
