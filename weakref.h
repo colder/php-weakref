@@ -50,6 +50,7 @@ typedef struct _weakref_object {
 	zend_object            std;
 	zval                  *ref;
 	zend_bool              valid;
+	unsigned int           acquired;
 } weakref_object;
 
 typedef struct _weakref_ref_list {

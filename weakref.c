@@ -68,6 +68,30 @@ static void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRML
 }
 /* }}} */
 
+static int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
+{
+	if (intern->valid) {
+		Z_ADDREF_P(intern->ref);
+		intern->acquired++;
+		return SUCCESS;
+	} else {
+		return FAILURE;
+	}
+}
+/* }}} */
+
+static int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
+{
+	if (intern->valid && (intern->acquired > 0)) {
+		zval_ptr_dtor(&intern->ref);
+		intern->acquired--;
+		return SUCCESS;
+	} else {
+		return FAILURE;
+	}
+}
+/* }}} */
+
 static void weakref_store_attach(weakref_object *intern, zval *ref TSRMLS_DC) /* {{{ */
 {
 	weakref_store      *store      = WEAKREF_G(store);
@@ -104,7 +128,6 @@ static void weakref_store_attach(weakref_object *intern, zval *ref TSRMLS_DC) /*
 }
 /* }}} */
 
-
 static void weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {
 	weakref_object *intern     = (weakref_object *)object;
@@ -138,7 +161,6 @@ static void weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 	efree(object);
 }
 /* }}} */
-
 
 static zend_object_value weakref_object_new_ex(zend_class_entry *class_type, weakref_object **obj, zval *orig, int clone_orig TSRMLS_DC) /* {{{ */
 {
@@ -175,6 +197,8 @@ static zend_object_value weakref_object_new_ex(zend_class_entry *class_type, wea
 		intern->valid = 0;
 		intern->ref   = NULL;
 	}
+
+	intern->acquired = 0;
 
 	retval.handle   = zend_objects_store_put(intern, (zend_objects_store_dtor_t)zend_objects_destroy_object, weakref_object_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &weakref_handler_WeakRef;
@@ -229,6 +253,48 @@ PHP_METHOD(WeakRef, get)
 }
 /* }}} */
 
+/* {{{ proto int WeakRef::acquire()
+ Return the reference, or null. */
+PHP_METHOD(WeakRef, acquire)
+{
+	zval *object = getThis();
+	weakref_object *intern;
+
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+		return;
+	}
+
+	intern = (weakref_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (weakref_ref_acquire(intern TSRMLS_CC) == SUCCESS) {
+		RETURN_TRUE;
+	} else {
+		RETURN_FALSE;
+	}
+}
+/* }}} */
+
+/* {{{ proto int WeakRef::release()
+ Return the reference, or null. */
+PHP_METHOD(WeakRef, release)
+{
+	zval *object = getThis();
+	weakref_object *intern;
+
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+		return;
+	}
+
+	intern = (weakref_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (weakref_ref_release(intern TSRMLS_CC) == SUCCESS) {
+		RETURN_TRUE;
+	} else {
+		RETURN_FALSE;
+	}
+}
+/* }}} */
+
 /* {{{ proto int WeakRef::valid()
  Return whether the reference still valid. */
 PHP_METHOD(WeakRef, valid)
@@ -279,6 +345,8 @@ static const zend_function_entry weakref_funcs_WeakRef[] = {
 	PHP_ME(WeakRef, __construct,     arginfo_weakref_obj,             ZEND_ACC_PUBLIC)
 	PHP_ME(WeakRef, valid,           arginfo_weakref_void,            ZEND_ACC_PUBLIC)
 	PHP_ME(WeakRef, get,             arginfo_weakref_void,            ZEND_ACC_PUBLIC)
+	PHP_ME(WeakRef, acquire,         arginfo_weakref_void,            ZEND_ACC_PUBLIC)
+	PHP_ME(WeakRef, release,         arginfo_weakref_void,            ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 /* }}} */
