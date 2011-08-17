@@ -106,17 +106,21 @@ static void weakref_store_attach(weakref_object *intern, zval *ref TSRMLS_DC) /*
 	data = &store->objs[ref_handle];
 
 	if (EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor == weakref_store_dtor) {
-		weakref_ref_list *list_entry = data->wrefs_head;
-		weakref_ref_list *next       = emalloc(sizeof(weakref_ref_list)); 
-
+		weakref_ref_list *next       = emalloc(sizeof(weakref_ref_list));
 		next->wref = intern;
 		next->next = NULL;
 
-		while (list_entry->next != NULL) {
-			list_entry = list_entry->next;
-		}
+		if (data->wrefs_head) {
+			weakref_ref_list *list_entry = data->wrefs_head;
 
-		list_entry->next = next;
+			while (list_entry->next != NULL) {
+				list_entry = list_entry->next;
+			}
+
+			list_entry->next = next;
+		} else {
+			data->wrefs_head = next;
+		}
 	} else {
 		data->orig_dtor = EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor;
 		EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = weakref_store_dtor;
