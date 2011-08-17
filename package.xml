@@ -17,8 +17,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2011-08-17</date>
  <version>
-  <release>0.0.1</release>
-  <api>0.0.1</api>
+  <release>0.1.0</release>
+  <api>0.1.0</api>
  </version>
  <stability>
   <release>alpha</release>
@@ -54,10 +54,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <changelog>
   <release>
    <stability><release>alpha</release><api>alpha</api></stability>
-   <version><release>0.0.1</release><api>0.0.1</api></version>
-   <date>2009-07-04</date>
+   <version><release>0.1.0</release><api>0.1.0</api></version>
+   <date>2011-08-18</date>
    <notes>
 - First release.
+   </notes>
+  </release>
+  <release>
+   <stability><release>alpha</release><api>alpha</api></stability>
+   <version><release>0.0.1</release><api>0.0.1</api></version>
+   <date>2011-08-18</date>
+   <notes>
+- First bogus release.
    </notes>
   </release>
  </changelog>
