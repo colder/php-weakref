@@ -236,7 +236,7 @@ static zend_object_value weakref_object_new(zend_class_entry *class_type TSRMLS_
 }
 /* }}} */
 
-/* {{{ proto int WeakRef::get()
+/* {{{ proto object WeakRef::get()
  Return the reference, or null. */
 PHP_METHOD(WeakRef, get)
 {
@@ -257,7 +257,7 @@ PHP_METHOD(WeakRef, get)
 }
 /* }}} */
 
-/* {{{ proto int WeakRef::acquire()
+/* {{{ proto bool WeakRef::acquire()
  Return the reference, or null. */
 PHP_METHOD(WeakRef, acquire)
 {
@@ -278,7 +278,7 @@ PHP_METHOD(WeakRef, acquire)
 }
 /* }}} */
 
-/* {{{ proto int WeakRef::release()
+/* {{{ proto bool WeakRef::release()
  Return the reference, or null. */
 PHP_METHOD(WeakRef, release)
 {
@@ -299,7 +299,7 @@ PHP_METHOD(WeakRef, release)
 }
 /* }}} */
 
-/* {{{ proto int WeakRef::valid()
+/* {{{ proto bool WeakRef::valid()
  Return whether the reference still valid. */
 PHP_METHOD(WeakRef, valid)
 {
