@@ -18,30 +18,10 @@
 
 /* $Id$ */
 
-#ifndef WEAKREF_H
-#define WEAKREF_H
-
-#include <php.h>
-
-#define PHP_WEAKREF_VERSION "0.0.1-alpha"
-
-#ifdef PHP_WIN32
-#define WEAKREF_API __declspec(dllexport)
-#else
-#define WEAKREF_API
-#endif
-
-#ifdef ZTS
-#include "TSRM.h"
-#endif
+#ifndef WR_WEAKREF_H
+#define WR_WEAKREF_H
 
 extern WEAKREF_API zend_class_entry *weakref_ce_WeakRef;
-
-PHP_MINFO_FUNCTION(weakref);
-
-PHP_MINIT_FUNCTION(weakref);
-PHP_RINIT_FUNCTION(weakref);
-PHP_RSHUTDOWN_FUNCTION(weakref);
 
 zend_object_handlers weakref_handler_WeakRef;
 WEAKREF_API zend_class_entry  *weakref_ce_WeakRef;
@@ -53,34 +33,8 @@ typedef struct _weakref_object {
 	unsigned int           acquired;
 } weakref_object;
 
-typedef struct _weakref_ref_list {
-	weakref_object           *wref;
-	struct _weakref_ref_list *next;
-} weakref_ref_list;
 
-typedef struct _weakref_store_data {
-	zend_objects_store_dtor_t  orig_dtor;
-	weakref_ref_list          *wrefs_head;
-} weakref_store_data;
-
-typedef struct _weakref_store {
-	weakref_store_data *objs;
-	uint size;
-} weakref_store;
-
-ZEND_BEGIN_MODULE_GLOBALS(weakref)
-    weakref_store *store;
-ZEND_END_MODULE_GLOBALS(weakref)
-
-#ifdef ZTS
-#define WEAKREF_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)
-int weakref_globals_id;
-#else
-#define WEAKREF_G(v) (weakref_globals.v)
-zend_weakref_globals weakref_globals;
-#endif
-
-#endif /* WEAKREF_H */
+#endif /* WR_WEAKREF_H */
 
 /*
  * Local Variables:

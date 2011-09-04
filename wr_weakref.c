@@ -25,110 +25,14 @@
 #include "php.h"
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
-#include "weakref.h"
+#include "php_weakref.h"
+#include "wr_weakref.h"
 
-static void weakref_store_init(TSRMLS_D) {
-	weakref_store *store = emalloc(sizeof(weakref_store));
-	store->objs = emalloc(sizeof(weakref_store_data));
-	store->size = 1;
 
-	WEAKREF_G(store) = store;
-}
-
-static void weakref_store_destroy(TSRMLS_D) {
-	weakref_store *store = WEAKREF_G(store);
-
-	if (store->objs != NULL) {
-		efree(store->objs);
-	}
-
-	efree(store);
-
-	WEAKREF_G(store) = NULL;
-}
-
-static void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
-{
-	weakref_store         *store         = WEAKREF_G(store);
-	zend_objects_store_dtor_t  orig_dtor = store->objs[ref_handle].orig_dtor;
-	weakref_store_data    data           = store->objs[ref_handle];
-	weakref_ref_list     *list_entry     = data.wrefs_head;
-
-	EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = data.orig_dtor;
-
-	orig_dtor(object, ref_handle TSRMLS_CC);
-
-	while (list_entry != NULL) {
-		weakref_ref_list *next = list_entry->next;
-		list_entry->wref->valid = 0;
-		list_entry->wref->ref = NULL;
-		efree(list_entry);
-		list_entry = next;
-	}
-}
-/* }}} */
-
-static int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
-{
-	if (intern->valid) {
-		Z_ADDREF_P(intern->ref);
-		intern->acquired++;
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-}
-/* }}} */
-
-static int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
-{
-	if (intern->valid && (intern->acquired > 0)) {
-		zval_ptr_dtor(&intern->ref);
-		intern->acquired--;
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-}
-/* }}} */
-
-static void weakref_store_attach(weakref_object *intern, zval *ref TSRMLS_DC) /* {{{ */
-{
-	weakref_store      *store      = WEAKREF_G(store);
-	zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(ref);
-	weakref_store_data *data       = NULL;
-
-	while (ref_handle >= store->size) {
-		store->size <<= 2;
-		store->objs = erealloc(store->objs, store->size * sizeof(weakref_store_data));
-	}
-
-	data = &store->objs[ref_handle];
-
-	if (EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor == weakref_store_dtor) {
-		weakref_ref_list *next       = emalloc(sizeof(weakref_ref_list));
-		next->wref = intern;
-		next->next = NULL;
-
-		if (data->wrefs_head) {
-			weakref_ref_list *list_entry = data->wrefs_head;
-
-			while (list_entry->next != NULL) {
-				list_entry = list_entry->next;
-			}
-
-			list_entry->next = next;
-		} else {
-			data->wrefs_head = next;
-		}
-	} else {
-		data->orig_dtor = EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor;
-		EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = weakref_store_dtor;
-
-        data->wrefs_head = emalloc(sizeof(weakref_ref_list));
-		data->wrefs_head->wref = intern;
-		data->wrefs_head->next = NULL;
-	}
+static void weakref_ref_std_dtor(void *object, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
+	weakref_object *wref = (weakref_object *)wref_obj;
+	wref->valid = 0;
+	wref->ref = NULL;
 }
 /* }}} */
 
@@ -144,7 +48,7 @@ static void weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 		weakref_ref_list   *prev       = NULL;
 		weakref_ref_list   *cur        = data->wrefs_head;
 
-		while (cur && cur->wref != intern) {
+		while (cur && cur->obj != (zend_object *)intern) {
 			prev = cur;
 			cur = cur->next;
 		}
@@ -192,7 +96,7 @@ static zend_object_value weakref_object_new_ex(zend_class_entry *class_type, wea
 		if (other->valid) {
 			intern->valid = other->valid;
 			intern->ref   = other->ref;
-			weakref_store_attach(intern, other->ref TSRMLS_CC);
+			weakref_store_attach((zend_object *)intern, weakref_ref_std_dtor, other->ref TSRMLS_CC);
 		} else {
 			intern->valid = 0;
 			intern->ref   = NULL;
@@ -331,7 +235,7 @@ PHP_METHOD(WeakRef, __construct)
 
 	intern->ref   = ref;
 
-	weakref_store_attach(intern, ref TSRMLS_CC);
+	weakref_store_attach((zend_object *)intern, weakref_ref_std_dtor, ref TSRMLS_CC);
 
 	intern->valid = 1;
 }
@@ -355,7 +259,7 @@ static const zend_function_entry weakref_funcs_WeakRef[] = {
 };
 /* }}} */
 
-PHP_MINIT_FUNCTION(weakref) /* {{{ */
+PHP_MINIT_FUNCTION(wr_weakref) /* {{{ */
 {
 	zend_class_entry weakref_ce;
 
@@ -372,58 +276,6 @@ PHP_MINIT_FUNCTION(weakref) /* {{{ */
 
 	return SUCCESS;
 }
-
-PHP_RINIT_FUNCTION(weakref) /* {{{ */
-{
-	weakref_store_init(TSRMLS_C);
-	return SUCCESS;
-}
-
-PHP_RSHUTDOWN_FUNCTION(weakref) /* {{{ */
-{
-	weakref_store_destroy(TSRMLS_C);
-
-	return SUCCESS;
-}
-/* }}} */
-
-static PHP_GINIT_FUNCTION(weakref) /* {{{ */
-{
-	weakref_globals->store = NULL;
-}
-/* }}} */
-
-PHP_MINFO_FUNCTION(weakref) /* {{{ */
-{
-	php_info_print_table_start();
-	php_info_print_table_header(2, "Weak References support", "enabled");
-	php_info_print_table_row(2, "Version", PHP_WEAKREF_VERSION);
-	php_info_print_table_end();
-}
-/* }}} */
-
-zend_module_entry weakref_module_entry = { /* {{{ */
-	STANDARD_MODULE_HEADER_EX, NULL,
-	NULL,
-	"Weakref",
-	NULL,
-	PHP_MINIT(weakref),
-	NULL,
-	PHP_RINIT(weakref),
-	PHP_RSHUTDOWN(weakref),
-	PHP_MINFO(weakref),
-	PHP_WEAKREF_VERSION,
-	PHP_MODULE_GLOBALS(weakref),
-	PHP_GINIT(weakref),
-	NULL,
-	NULL,
-	STANDARD_MODULE_PROPERTIES_EX
-};
-/* }}} */
-
-#ifdef COMPILE_DL_WEAKREF
-ZEND_GET_MODULE(weakref);
-#endif
 
 /*
  * Local variables:
