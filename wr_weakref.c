@@ -25,6 +25,7 @@
 #include "php.h"
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
+#include "ext/spl/spl_exceptions.h"
 #include "wr_weakref.h"
 #include "php_weakref.h"
 
@@ -64,6 +65,14 @@ static int wr_weakref_ref_release(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 static void wr_weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {
 	wr_weakref_object *intern     = (wr_weakref_object *)object;
+
+	while (intern->acquired > 0) {
+		if (wr_weakref_ref_release(intern TSRMLS_CC) != SUCCESS) {
+			// shouldn't occur
+			zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly release the reference on free", 0 TSRMLS_CC);
+			break;
+		}
+	}
 
 	if (intern->valid) {
 		zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(intern->ref);
@@ -119,19 +128,31 @@ static zend_object_value wr_weakref_object_new_ex(zend_class_entry *class_type, 
 	if (clone_orig && orig) {
 		wr_weakref_object *other = (wr_weakref_object *)zend_object_store_get_object(orig TSRMLS_CC);
 		if (other->valid) {
+			int acquired = 0;
+
 			intern->valid = other->valid;
 			intern->ref   = other->ref;
 			wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, other->ref TSRMLS_CC);
+
+			for (acquired = 0; acquired < other->acquired; acquired++) {
+				wr_weakref_ref_acquire(intern TSRMLS_CC);
+			}
+
+			if (intern->acquired != other->acquired) {
+				// shouldn't occur
+				zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly acquire clone's reference", 0 TSRMLS_CC);
+			}
+
 		} else {
 			intern->valid = 0;
 			intern->ref   = NULL;
+			intern->acquired = 0;
 		}
 	} else {
 		intern->valid = 0;
 		intern->ref   = NULL;
+		intern->acquired = 0;
 	}
-
-	intern->acquired = 0;
 
 	retval.handle   = zend_objects_store_put(intern, (zend_objects_store_dtor_t)zend_objects_destroy_object, wr_weakref_object_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &wr_handler_WeakRef;
