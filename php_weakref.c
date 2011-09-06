@@ -26,6 +26,7 @@
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
 #include "wr_weakref.h"
+#include "wr_weakmap.h"
 #include "php_weakref.h"
 
 void wr_store_init(TSRMLS_D) {
@@ -113,6 +114,7 @@ void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC)
 PHP_MINIT_FUNCTION(weakref) /* {{{ */
 {
 	PHP_MINIT(wr_weakref)(INIT_FUNC_ARGS_PASSTHRU);
+	PHP_MINIT(wr_weakmap)(INIT_FUNC_ARGS_PASSTHRU);
 }
 
 PHP_RINIT_FUNCTION(weakref) /* {{{ */

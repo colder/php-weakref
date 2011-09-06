@@ -50,6 +50,10 @@ typedef struct _wr_weakref_object {
 	unsigned int           acquired;
 } wr_weakref_object;
 
+typedef struct _wr_weakmap_object {
+	zend_object            std;
+} wr_weakmap_object;
+
 typedef void (*wr_ref_dtor)(void *object, zend_object *wref_obj TSRMLS_DC);
 
 typedef struct _wr_ref_list {
