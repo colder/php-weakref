@@ -29,15 +29,17 @@
 #include "wr_weakmap.h"
 #include "php_weakref.h"
 
-void wr_store_init(TSRMLS_D) {
+void wr_store_init(TSRMLS_D) /* {{{ */
+{
 	wr_store *store = emalloc(sizeof(wr_store));
 	store->objs = emalloc(sizeof(wr_store_data));
 	store->size = 1;
 
 	WR_G(store) = store;
-}
+} /* }}} */
 
-void wr_store_destroy(TSRMLS_D) {
+void wr_store_destroy(TSRMLS_D) /* {{{ */
+{
 	wr_store *store = WR_G(store);
 
 	if (store->objs != NULL) {
@@ -47,7 +49,7 @@ void wr_store_destroy(TSRMLS_D) {
 	efree(store);
 
 	WR_G(store) = NULL;
-}
+} /* }}} */
 
 void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
 {

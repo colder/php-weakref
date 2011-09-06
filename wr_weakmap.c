@@ -24,6 +24,7 @@
 
 #include "php.h"
 #include "zend_exceptions.h"
+#include "ext/spl/spl_exceptions.h"
 #include "ext/standard/info.h"
 #include "wr_weakmap.h"
 #include "php_weakref.h"
@@ -78,6 +79,7 @@ static zend_object_value wr_weakmap_object_new_ex(zend_class_entry *class_type, 
 {
 	zend_object_value  retval;
 	wr_weakmap_object *intern;
+	zend_class_entry  *parent = class_type;
 
 #if PHP_VERSION_ID < 50399
 	zval              *tmp;
@@ -100,6 +102,29 @@ static zend_object_value wr_weakmap_object_new_ex(zend_class_entry *class_type, 
 		//TODO
 	} else {
 		//TODO
+	}
+
+	if (class_type != wr_ce_WeakMap) {
+		zend_hash_find(&class_type->function_table, "offsetget",    sizeof("offsetget"),    (void **) &intern->fptr_offset_get);
+		if (intern->fptr_offset_get->common.scope == wr_ce_WeakMap) {
+			intern->fptr_offset_get = NULL;
+		}
+		zend_hash_find(&class_type->function_table, "offsetset",    sizeof("offsetset"),    (void **) &intern->fptr_offset_set);
+		if (intern->fptr_offset_set->common.scope == wr_ce_WeakMap) {
+			intern->fptr_offset_set = NULL;
+		}
+		zend_hash_find(&class_type->function_table, "offsetexists", sizeof("offsetexists"), (void **) &intern->fptr_offset_has);
+		if (intern->fptr_offset_has->common.scope == wr_ce_WeakMap) {
+			intern->fptr_offset_has = NULL;
+		}
+		zend_hash_find(&class_type->function_table, "offsetunset",  sizeof("offsetunset"),  (void **) &intern->fptr_offset_del);
+		if (intern->fptr_offset_del->common.scope == wr_ce_WeakMap) {
+			intern->fptr_offset_del = NULL;
+		}
+		zend_hash_find(&class_type->function_table, "count",        sizeof("count"),        (void **) &intern->fptr_count);
+		if (intern->fptr_count->common.scope == wr_ce_WeakMap) {
+			intern->fptr_count = NULL;
+		}
 	}
 
 	retval.handle   = zend_objects_store_put(intern, (zend_objects_store_dtor_t)zend_objects_destroy_object, wr_weakmap_object_free_storage, NULL TSRMLS_CC);
@@ -134,6 +159,188 @@ static zend_object_value wr_weakmap_object_new(zend_class_entry *class_type TSRM
 }
 /* }}} */
 
+static inline zval **wr_weakmap_object_read_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
+{
+	long index;
+
+	/* we have to return NULL on error here to avoid memleak because of 
+	 * ZE duplicating uninitialized_zval_ptr */
+	if (!offset) {
+		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0 TSRMLS_CC);
+		return NULL;
+	}
+
+	if (Z_TYPE_P(offset) != IS_OBJECT) {
+		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
+		return NULL;
+	}
+	
+	//TODO
+	return NULL;
+}
+/* }}} */
+
+static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int type TSRMLS_DC) /* {{{ */
+{
+	wr_weakmap_object *intern;
+	zval **retval;
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (intern->fptr_offset_get) {
+		zval *rv;
+		SEPARATE_ARG_IF_REF(offset);
+		zend_call_method_with_1_params(&object, intern->std.ce, &intern->fptr_offset_get, "offsetGet", &rv, offset);
+		zval_ptr_dtor(&offset);
+		if (rv) {
+			Z_DELREF_P(rv);
+			return rv;
+		}
+		return EG(uninitialized_zval_ptr);
+	}
+
+	retval = wr_weakmap_object_read_dimension_helper(intern, offset TSRMLS_CC);
+	if (retval) {
+		return *retval;
+	}
+	return NULL;
+}
+/* }}} */
+
+static inline void wr_weakmap_object_write_dimension_helper(wr_weakmap_object *intern, zval *offset, zval *value TSRMLS_DC) /* {{{ */
+{
+	long index;
+
+	if (!offset) {
+		/* '$array[] = value' syntax is not supported */
+		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0 TSRMLS_CC);
+		return;
+	}
+
+	if (Z_TYPE_P(offset) != IS_OBJECT) {
+		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
+		return;
+	}
+
+	//TODO
+}
+/* }}} */
+
+static void wr_weakmap_object_write_dimension(zval *object, zval *offset, zval *value TSRMLS_DC) /* {{{ */
+{
+	wr_weakmap_object *intern;
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (intern->fptr_offset_set) {
+		if (!offset) {
+			ALLOC_INIT_ZVAL(offset);
+		} else {
+			SEPARATE_ARG_IF_REF(offset);
+		}
+		SEPARATE_ARG_IF_REF(value);
+		zend_call_method_with_2_params(&object, intern->std.ce, &intern->fptr_offset_set, "offsetSet", NULL, offset, value);
+		zval_ptr_dtor(&value);
+		zval_ptr_dtor(&offset);
+		return;
+	}
+
+	wr_weakmap_object_write_dimension_helper(intern, offset, value TSRMLS_CC);
+}
+/* }}} */
+
+static inline void wr_weakmap_object_unset_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
+{
+	if (Z_TYPE_P(offset) != IS_OBJECT) {
+		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
+		return;
+	}
+
+	// TODO
+}
+/* }}} */
+
+static void wr_weakmap_object_unset_dimension(zval *object, zval *offset TSRMLS_DC) /* {{{ */
+{
+	wr_weakmap_object *intern;
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (intern->fptr_offset_del) {
+		SEPARATE_ARG_IF_REF(offset);
+		zend_call_method_with_1_params(&object, intern->std.ce, &intern->fptr_offset_del, "offsetUnset", NULL, offset);
+		zval_ptr_dtor(&offset);
+		return;
+	}
+
+	wr_weakmap_object_unset_dimension_helper(intern, offset TSRMLS_CC);
+
+}
+/* }}} */
+
+static inline int wr_weakmap_object_has_dimension_helper(wr_weakmap_object *intern, zval *offset, int check_empty TSRMLS_DC) /* {{{ */
+{
+	int retval = 0;
+	
+	if (Z_TYPE_P(offset) != IS_OBJECT) {
+		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
+		return;
+	}
+
+	// TODO
+
+	return retval;
+}
+/* }}} */
+
+static int wr_weakmap_object_has_dimension(zval *object, zval *offset, int check_empty TSRMLS_DC) /* {{{ */
+{
+	wr_weakmap_object *intern;
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	if (intern->fptr_offset_get) {
+		zval *rv;
+		SEPARATE_ARG_IF_REF(offset);
+		zend_call_method_with_1_params(&object, intern->std.ce, &intern->fptr_offset_has, "offsetExists", &rv, offset);
+		zval_ptr_dtor(&offset);
+		if (rv) {
+			int result = i_zend_is_true(rv);
+			zval_ptr_dtor(&rv);
+			return result;
+		}
+		return 0;
+	}
+
+	return wr_weakmap_object_has_dimension_helper(intern, offset, check_empty TSRMLS_CC);
+}
+/* }}} */
+
+static int wr_weakmap_object_count_elements(zval *object, long *count TSRMLS_DC) /* {{{ */
+{
+	wr_weakmap_object *intern;
+	
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+	if (intern->fptr_count) {
+		zval *rv;
+		zend_call_method_with_0_params(&object, intern->std.ce, &intern->fptr_count, "count", &rv);
+		if (rv) {
+			zval *retval;
+			MAKE_STD_ZVAL(retval);
+			ZVAL_ZVAL(retval, rv, 1, 1);
+			convert_to_long(retval);
+			*count = (long) Z_LVAL_P(retval);
+			zval_ptr_dtor(&retval);
+			return SUCCESS;
+		}
+	}
+
+	// TODO
+	*count = 0;
+	return SUCCESS;
+}
+/* }}} */
+
 /* {{{ proto void WeakMap::__construct()
 */
 PHP_METHOD(WeakMap, __construct)
@@ -143,6 +350,91 @@ PHP_METHOD(WeakMap, __construct)
 	}
 }
 /* }}} */
+
+/* {{{ proto int WeakMap::count(void)
+*/
+PHP_METHOD(WeakMap, count)
+{
+	zval *object = getThis();
+	wr_weakmap_object *intern;
+
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+		return;
+	}
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
+	RETURN_LONG(0);
+}
+/* }}} */
+
+/* {{{ proto bool WeakMap::offsetExists(mixed $index) U
+ Returns whether the requested $index exists. */
+PHP_METHOD(WeakMap, offsetExists)
+{
+	zval                  *zindex;
+	wr_weakmap_object  *intern;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zindex) == FAILURE) {
+		return;
+	}
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+
+	RETURN_BOOL(wr_weakmap_object_has_dimension_helper(intern, zindex, 0 TSRMLS_CC));
+} /* }}} */
+
+/* {{{ proto mixed WeakMap::offsetGet(mixed $index) U
+ Returns the value at the specified $index. */
+PHP_METHOD(WeakMap, offsetGet)
+{
+	zval                  *zindex, **value_pp;
+	wr_weakmap_object  *intern;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zindex) == FAILURE) {
+		return;
+	}
+
+	intern    = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	value_pp  = wr_weakmap_object_read_dimension_helper(intern, zindex TSRMLS_CC);
+
+	if (value_pp) {
+		RETURN_ZVAL(*value_pp, 1, 0);
+	}
+	RETURN_NULL();
+} /* }}} */
+
+/* {{{ proto void WeakMap::offsetSet(mixed $index, mixed $newval) U
+ Sets the value at the specified $index to $newval. */
+PHP_METHOD(WeakMap, offsetSet)
+{
+	zval                  *zindex, *value;
+	wr_weakmap_object  *intern;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &zindex, &value) == FAILURE) {
+		return;
+	}
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	wr_weakmap_object_write_dimension_helper(intern, zindex, value TSRMLS_CC);
+
+} /* }}} */
+
+/* {{{ proto void WeakMap::offsetUnset(mixed $index) U
+ Unsets the value at the specified $index. */
+PHP_METHOD(WeakMap, offsetUnset)
+{
+	zval                  *zindex;
+	wr_weakmap_object  *intern;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zindex) == FAILURE) {
+		return;
+	}
+
+	intern = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	wr_weakmap_object_unset_dimension_helper(intern, zindex TSRMLS_CC);
+
+} /* }}} */
 
 /*  Function/Class/Method definitions */
 ZEND_BEGIN_ARG_INFO(arginfo_wr_weakmap_void, 0)
@@ -158,7 +450,12 @@ ZEND_BEGIN_ARG_INFO(arginfo_wr_weakmap_obj_val, 0)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry wr_funcs_WeakMap[] = {
-	PHP_ME(WeakMap, __construct,     arginfo_wr_weakmap_void,             ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, __construct,     arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, count,           arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, offsetExists,    arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, offsetGet,       arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, offsetSet,       arginfo_wr_weakmap_obj_val,   ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap, offsetUnset,     arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -171,12 +468,17 @@ PHP_MINIT_FUNCTION(wr_weakmap) /* {{{ */
 
 	wr_ce_WeakMap = zend_register_internal_class(&weakmap_ce TSRMLS_CC);
 
-	wr_ce_WeakMap->ce_flags      |= ZEND_ACC_FINAL_CLASS;
-	wr_ce_WeakMap->create_object  = wr_weakmap_object_new;
+	wr_ce_WeakMap->ce_flags        |= ZEND_ACC_FINAL_CLASS;
+	wr_ce_WeakMap->create_object    = wr_weakmap_object_new;
 
 	memcpy(&wr_handler_WeakMap, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 
-	wr_handler_WeakMap.clone_obj = wr_weakmap_object_clone;
+	wr_handler_WeakMap.clone_obj       = wr_weakmap_object_clone;
+	wr_handler_WeakMap.read_dimension  = wr_weakmap_object_read_dimension;
+	wr_handler_WeakMap.write_dimension = wr_weakmap_object_write_dimension;
+	wr_handler_WeakMap.unset_dimension = wr_weakmap_object_unset_dimension;
+	wr_handler_WeakMap.has_dimension   = wr_weakmap_object_has_dimension;
+	wr_handler_WeakMap.count_elements  = wr_weakmap_object_count_elements;
 
 	return SUCCESS;
 }
