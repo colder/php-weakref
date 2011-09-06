@@ -35,11 +35,20 @@
 #include "TSRM.h"
 #endif
 
+#include "wr_weakref.h"
+
 PHP_MINFO_FUNCTION(weakref);
 
 PHP_MINIT_FUNCTION(weakref);
 PHP_RINIT_FUNCTION(weakref);
 PHP_RSHUTDOWN_FUNCTION(weakref);
+
+typedef struct _weakref_object {
+	zend_object            std;
+	zval                  *ref;
+	zend_bool              valid;
+	unsigned int           acquired;
+} weakref_object;
 
 typedef void (*weakref_ref_dtor)(void *object, zend_object *wref_obj TSRMLS_DC);
 
@@ -62,6 +71,13 @@ typedef struct _weakref_store {
 ZEND_BEGIN_MODULE_GLOBALS(weakref)
     weakref_store *store;
 ZEND_END_MODULE_GLOBALS(weakref)
+
+void weakref_store_init(TSRMLS_D);
+void weakref_store_destroy(TSRMLS_D);
+void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC);
+int weakref_ref_acquire(weakref_object *intern TSRMLS_DC);
+int weakref_ref_release(weakref_object *intern TSRMLS_DC);
+void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC);
 
 #ifdef ZTS
 #define WEAKREF_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)

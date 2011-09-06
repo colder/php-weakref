@@ -1,5 +1,5 @@
 --TEST--
-Weakref: usage
+Weakref: acquire/release usage
 --FILE--
 <?php
 $o = new StdClass;

@@ -25,10 +25,10 @@
 #include "php.h"
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
-#include "php_weakref.h"
 #include "wr_weakref.h"
+#include "php_weakref.h"
 
-static void weakref_store_init(TSRMLS_D) {
+void weakref_store_init(TSRMLS_D) {
 	weakref_store *store = emalloc(sizeof(weakref_store));
 	store->objs = emalloc(sizeof(weakref_store_data));
 	store->size = 1;
@@ -36,7 +36,7 @@ static void weakref_store_init(TSRMLS_D) {
 	WEAKREF_G(store) = store;
 }
 
-static void weakref_store_destroy(TSRMLS_D) {
+void weakref_store_destroy(TSRMLS_D) {
 	weakref_store *store = WEAKREF_G(store);
 
 	if (store->objs != NULL) {
@@ -48,7 +48,7 @@ static void weakref_store_destroy(TSRMLS_D) {
 	WEAKREF_G(store) = NULL;
 }
 
-static void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
+void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
 {
 	weakref_store         *store         = WEAKREF_G(store);
 	zend_objects_store_dtor_t  orig_dtor = store->objs[ref_handle].orig_dtor;
@@ -68,31 +68,7 @@ static void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRML
 }
 /* }}} */
 
-static int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
-{
-	if (intern->valid) {
-		Z_ADDREF_P(intern->ref);
-		intern->acquired++;
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-}
-/* }}} */
-
-static int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
-{
-	if (intern->valid && (intern->acquired > 0)) {
-		zval_ptr_dtor(&intern->ref);
-		intern->acquired--;
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-}
-/* }}} */
-
-static void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC) /* {{{ */
+void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC) /* {{{ */
 {
 	weakref_store      *store      = WEAKREF_G(store);
 	zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(ref);

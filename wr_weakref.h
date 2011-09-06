@@ -21,18 +21,12 @@
 #ifndef WR_WEAKREF_H
 #define WR_WEAKREF_H
 
+#include "php_weakref.h"
+
 extern WEAKREF_API zend_class_entry *weakref_ce_WeakRef;
 
 zend_object_handlers weakref_handler_WeakRef;
 WEAKREF_API zend_class_entry  *weakref_ce_WeakRef;
-
-typedef struct _weakref_object {
-	zend_object            std;
-	zval                  *ref;
-	zend_bool              valid;
-	unsigned int           acquired;
-} weakref_object;
-
 
 #endif /* WR_WEAKREF_H */
 
