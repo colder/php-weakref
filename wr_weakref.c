@@ -36,7 +36,7 @@ static void weakref_ref_std_dtor(void *object, zend_object *wref_obj TSRMLS_DC) 
 }
 /* }}} */
 
-int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
+static int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
 {
 	if (intern->valid) {
 		Z_ADDREF_P(intern->ref);
@@ -48,7 +48,7 @@ int weakref_ref_acquire(weakref_object *intern TSRMLS_DC) /* {{{ */
 }
 /* }}} */
 
-int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
+static int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
 {
 	if (intern->valid && (intern->acquired > 0)) {
 		zval *ref_tmp = intern->ref;
@@ -60,7 +60,6 @@ int weakref_ref_release(weakref_object *intern TSRMLS_DC) /* {{{ */
 	}
 }
 /* }}} */
-
 
 static void weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {

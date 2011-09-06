@@ -75,8 +75,6 @@ ZEND_END_MODULE_GLOBALS(weakref)
 void weakref_store_init(TSRMLS_D);
 void weakref_store_destroy(TSRMLS_D);
 void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC);
-int weakref_ref_acquire(weakref_object *intern TSRMLS_DC);
-int weakref_ref_release(weakref_object *intern TSRMLS_DC);
 void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC);
 
 #ifdef ZTS
