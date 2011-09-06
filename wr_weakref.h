@@ -23,10 +23,10 @@
 
 #include "php_weakref.h"
 
-extern WEAKREF_API zend_class_entry *weakref_ce_WeakRef;
+extern WEAKREF_API zend_class_entry *wr_ce_WeakRef;
 
-zend_object_handlers weakref_handler_WeakRef;
-WEAKREF_API zend_class_entry  *weakref_ce_WeakRef;
+zend_object_handlers wr_handler_WeakRef;
+WEAKREF_API zend_class_entry  *wr_ce_WeakRef;
 
 #endif /* WR_WEAKREF_H */
 

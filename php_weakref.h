@@ -43,45 +43,45 @@ PHP_MINIT_FUNCTION(weakref);
 PHP_RINIT_FUNCTION(weakref);
 PHP_RSHUTDOWN_FUNCTION(weakref);
 
-typedef struct _weakref_object {
+typedef struct _wr_weakref_object {
 	zend_object            std;
 	zval                  *ref;
 	zend_bool              valid;
 	unsigned int           acquired;
-} weakref_object;
+} wr_weakref_object;
 
-typedef void (*weakref_ref_dtor)(void *object, zend_object *wref_obj TSRMLS_DC);
+typedef void (*wr_ref_dtor)(void *object, zend_object *wref_obj TSRMLS_DC);
 
-typedef struct _weakref_ref_list {
+typedef struct _wr_ref_list {
 	zend_object              *obj;
-	weakref_ref_dtor          dtor;
-	struct _weakref_ref_list *next;
-} weakref_ref_list;
+	wr_ref_dtor          dtor;
+	struct _wr_ref_list *next;
+} wr_ref_list;
 
-typedef struct _weakref_store_data {
+typedef struct _wr_store_data {
 	zend_objects_store_dtor_t  orig_dtor;
-	weakref_ref_list          *wrefs_head;
-} weakref_store_data;
+	wr_ref_list          *wrefs_head;
+} wr_store_data;
 
-typedef struct _weakref_store {
-	weakref_store_data *objs;
+typedef struct _wr_store {
+	wr_store_data *objs;
 	uint size;
-} weakref_store;
+} wr_store;
 
 ZEND_BEGIN_MODULE_GLOBALS(weakref)
-    weakref_store *store;
+    wr_store *store;
 ZEND_END_MODULE_GLOBALS(weakref)
 
-void weakref_store_init(TSRMLS_D);
-void weakref_store_destroy(TSRMLS_D);
-void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC);
-void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC);
+void wr_store_init(TSRMLS_D);
+void wr_store_destroy(TSRMLS_D);
+void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC);
+void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC);
 
 #ifdef ZTS
-#define WEAKREF_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)
+#define WR_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)
 int weakref_globals_id;
 #else
-#define WEAKREF_G(v) (weakref_globals.v)
+#define WR_G(v) (weakref_globals.v)
 zend_weakref_globals weakref_globals;
 #endif
 

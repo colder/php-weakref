@@ -28,16 +28,16 @@
 #include "wr_weakref.h"
 #include "php_weakref.h"
 
-void weakref_store_init(TSRMLS_D) {
-	weakref_store *store = emalloc(sizeof(weakref_store));
-	store->objs = emalloc(sizeof(weakref_store_data));
+void wr_store_init(TSRMLS_D) {
+	wr_store *store = emalloc(sizeof(wr_store));
+	store->objs = emalloc(sizeof(wr_store_data));
 	store->size = 1;
 
-	WEAKREF_G(store) = store;
+	WR_G(store) = store;
 }
 
-void weakref_store_destroy(TSRMLS_D) {
-	weakref_store *store = WEAKREF_G(store);
+void wr_store_destroy(TSRMLS_D) {
+	wr_store *store = WR_G(store);
 
 	if (store->objs != NULL) {
 		efree(store->objs);
@@ -45,22 +45,22 @@ void weakref_store_destroy(TSRMLS_D) {
 
 	efree(store);
 
-	WEAKREF_G(store) = NULL;
+	WR_G(store) = NULL;
 }
 
-void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
+void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
 {
-	weakref_store         *store         = WEAKREF_G(store);
-	zend_objects_store_dtor_t  orig_dtor = store->objs[ref_handle].orig_dtor;
-	weakref_store_data    data           = store->objs[ref_handle];
-	weakref_ref_list     *list_entry     = data.wrefs_head;
+	wr_store                  *store      = WR_G(store);
+	zend_objects_store_dtor_t  orig_dtor  = store->objs[ref_handle].orig_dtor;
+	wr_store_data              data       = store->objs[ref_handle];
+	wr_ref_list               *list_entry = data.wrefs_head;
 
 	EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = data.orig_dtor;
 
 	orig_dtor(object, ref_handle TSRMLS_CC);
 
 	while (list_entry != NULL) {
-		weakref_ref_list *next = list_entry->next;
+		wr_ref_list *next = list_entry->next;
 		list_entry->dtor(object, list_entry->obj TSRMLS_CC);
 		efree(list_entry);
 		list_entry = next;
@@ -68,27 +68,27 @@ void weakref_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /
 }
 /* }}} */
 
-void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref TSRMLS_DC) /* {{{ */
+void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC) /* {{{ */
 {
-	weakref_store      *store      = WEAKREF_G(store);
+	wr_store           *store      = WR_G(store);
 	zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(ref);
-	weakref_store_data *data       = NULL;
+	wr_store_data      *data       = NULL;
 
 	while (ref_handle >= store->size) {
 		store->size <<= 2;
-		store->objs = erealloc(store->objs, store->size * sizeof(weakref_store_data));
+		store->objs = erealloc(store->objs, store->size * sizeof(wr_store_data));
 	}
 
 	data = &store->objs[ref_handle];
 
-	if (EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor == weakref_store_dtor) {
-		weakref_ref_list *next       = emalloc(sizeof(weakref_ref_list));
+	if (EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor == wr_store_dtor) {
+		wr_ref_list *next = emalloc(sizeof(wr_ref_list));
 		next->obj  = intern;
 		next->dtor = dtor;
 		next->next = NULL;
 
 		if (data->wrefs_head) {
-			weakref_ref_list *list_entry = data->wrefs_head;
+			wr_ref_list *list_entry = data->wrefs_head;
 
 			while (list_entry->next != NULL) {
 				list_entry = list_entry->next;
@@ -100,9 +100,9 @@ void weakref_store_attach(zend_object *intern, weakref_ref_dtor dtor, zval *ref 
 		}
 	} else {
 		data->orig_dtor = EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor;
-		EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = weakref_store_dtor;
+		EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = wr_store_dtor;
 
-        data->wrefs_head = emalloc(sizeof(weakref_ref_list));
+        data->wrefs_head = emalloc(sizeof(wr_ref_list));
 		data->wrefs_head->obj  = intern;
 		data->wrefs_head->dtor = dtor;
 		data->wrefs_head->next = NULL;
@@ -117,13 +117,13 @@ PHP_MINIT_FUNCTION(weakref) /* {{{ */
 
 PHP_RINIT_FUNCTION(weakref) /* {{{ */
 {
-	weakref_store_init(TSRMLS_C);
+	wr_store_init(TSRMLS_C);
 	return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(weakref) /* {{{ */
 {
-	weakref_store_destroy(TSRMLS_C);
+	wr_store_destroy(TSRMLS_C);
 
 	return SUCCESS;
 }
