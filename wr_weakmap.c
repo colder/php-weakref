@@ -25,6 +25,8 @@
 #include "php.h"
 #include "zend_exceptions.h"
 #include "ext/spl/spl_exceptions.h"
+#include "ext/spl/spl_iterators.h"
+#include "Zend/zend_interfaces.h"
 #include "ext/standard/info.h"
 #include "wr_weakmap.h"
 #include "php_weakref.h"
@@ -455,6 +457,8 @@ PHP_MINIT_FUNCTION(wr_weakmap) /* {{{ */
 	wr_handler_WeakMap.unset_dimension = wr_weakmap_object_unset_dimension;
 	wr_handler_WeakMap.has_dimension   = wr_weakmap_object_has_dimension;
 	wr_handler_WeakMap.count_elements  = wr_weakmap_object_count_elements;
+
+	zend_class_implements(wr_ce_WeakMap TSRMLS_CC, 2, spl_ce_Countable, spl_ce_ArrayAccess);
 
 	return SUCCESS;
 }
