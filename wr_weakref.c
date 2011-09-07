@@ -30,7 +30,7 @@
 #include "php_weakref.h"
 
 
-static void wr_weakref_ref_dtor(void *object, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
+static void wr_weakref_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
 	wr_weakref_object *wref = (wr_weakref_object *)wref_obj;
 	wref->valid = 0;
 	wref->ref = NULL;

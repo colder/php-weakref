@@ -51,7 +51,7 @@ void wr_store_destroy(TSRMLS_D) /* {{{ */
 	WR_G(store) = NULL;
 } /* }}} */
 
-void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
+void wr_store_dtor(void *ref_object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
 	zend_objects_store_dtor_t  orig_dtor  = store->objs[ref_handle].orig_dtor;
@@ -60,11 +60,11 @@ void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC) /* {{{
 
 	EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = data.orig_dtor;
 
-	orig_dtor(object, ref_handle TSRMLS_CC);
+	orig_dtor(ref_object, ref_handle TSRMLS_CC);
 
 	while (list_entry != NULL) {
 		wr_ref_list *next = list_entry->next;
-		list_entry->dtor(object, list_entry->obj TSRMLS_CC);
+		list_entry->dtor(ref_object, ref_handle, list_entry->obj TSRMLS_CC);
 		efree(list_entry);
 		list_entry = next;
 	}

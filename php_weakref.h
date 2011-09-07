@@ -43,23 +43,7 @@ PHP_MINIT_FUNCTION(weakref);
 PHP_RINIT_FUNCTION(weakref);
 PHP_RSHUTDOWN_FUNCTION(weakref);
 
-typedef struct _wr_weakref_object {
-	zend_object            std;
-	zval                  *ref;
-	zend_bool              valid;
-	unsigned int           acquired;
-} wr_weakref_object;
-
-typedef struct _wr_weakmap_object {
-	zend_object            std;
-	zend_function         *fptr_offset_get;
-	zend_function         *fptr_offset_set;
-	zend_function         *fptr_offset_has;
-	zend_function         *fptr_offset_del;
-	zend_function         *fptr_count;
-} wr_weakmap_object;
-
-typedef void (*wr_ref_dtor)(void *object, zend_object *wref_obj TSRMLS_DC);
+typedef void (*wr_ref_dtor)(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC);
 
 typedef struct _wr_ref_list {
 	zend_object              *obj;

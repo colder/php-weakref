@@ -30,48 +30,23 @@
 #include "php_weakref.h"
 
 
-static void wr_weakmap_ref_dtor(void *object, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
-	/*
-	wr_weakref_object *wref = (wr_weakref_object *)wref_obj;
-	wref->valid = 0;
-	wref->ref = NULL;
-	*/
+static void wr_weakmap_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
+	wr_weakmap_object *intern = (wr_weakmap_object *)wref_obj;
+
+	zend_hash_index_del(&intern->map, ref_handle);
 }
 /* }}} */
 
 static void wr_weakmap_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {
-	/*
-	wr_weakref_object *intern     = (wr_weakref_object *)object;
 
-	if (intern->valid) {
-		zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(intern->ref);
-		wr_store      *store           = WR_G(store);
-
-		wr_store_data *data            = &store->objs[ref_handle];
-		wr_ref_list   *prev            = NULL;
-		wr_ref_list   *cur             = data->wrefs_head;
-
-		while (cur && cur->obj != (zend_object *)intern) {
-			prev = cur;
-			cur  = cur->next;
-		}
-
-		assert(cur != NULL);
-
-		if (prev) {
-			prev->next = cur->next;
-		} else {
-			data->wrefs_head = cur->next;
-		}
-
-		efree(cur);
-	}
+	wr_weakmap_object *intern     = (wr_weakmap_object *)object;
 
 	zend_object_std_dtor(&intern->std TSRMLS_CC);
 
-	efree(object);
-	*/
+	zend_hash_destroy(&intern->map);
+
+	efree(intern);
 }
 /* }}} */
 
@@ -96,6 +71,8 @@ static zend_object_value wr_weakmap_object_new_ex(zend_class_entry *class_type, 
 #else
 	zend_hash_copy(intern->std.properties, &class_type->default_properties, (copy_ctor_func_t) zval_add_ref, (void *) &tmp, sizeof(zval *));
 #endif
+
+	zend_hash_init(&intern->map, 0, NULL, ZVAL_PTR_DTOR, 0);
 
 	if (clone_orig && orig) {
 		wr_weakmap_object *other = (wr_weakmap_object *)zend_object_store_get_object(orig TSRMLS_CC);
@@ -159,31 +136,27 @@ static zend_object_value wr_weakmap_object_new(zend_class_entry *class_type TSRM
 }
 /* }}} */
 
-static inline zval **wr_weakmap_object_read_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
+static inline zval *wr_weakmap_object_read_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
 {
-	long index;
+	zval *retval;
 
-	/* we have to return NULL on error here to avoid memleak because of 
-	 * ZE duplicating uninitialized_zval_ptr */
-	if (!offset) {
+	if (!offset || Z_TYPE_P(offset) != IS_OBJECT) {
 		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0 TSRMLS_CC);
 		return NULL;
 	}
 
-	if (Z_TYPE_P(offset) != IS_OBJECT) {
-		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
-		return NULL;
+	if (zend_hash_index_find(&intern->map, Z_OBJ_HANDLE_P(offset), (void**)&retval) == FAILURE) {
+		retval = NULL;
 	}
-	
-	//TODO
-	return NULL;
+
+	return retval;
 }
 /* }}} */
 
 static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int type TSRMLS_DC) /* {{{ */
 {
 	wr_weakmap_object *intern;
-	zval **retval;
+	zval *retval;
 
 	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
 
@@ -201,7 +174,7 @@ static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int ty
 
 	retval = wr_weakmap_object_read_dimension_helper(intern, offset TSRMLS_CC);
 	if (retval) {
-		return *retval;
+		return retval;
 	}
 	return NULL;
 }
@@ -209,11 +182,8 @@ static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int ty
 
 static inline void wr_weakmap_object_write_dimension_helper(wr_weakmap_object *intern, zval *offset, zval *value TSRMLS_DC) /* {{{ */
 {
-	long index;
-
 	if (!offset) {
-		/* '$array[] = value' syntax is not supported */
-		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0 TSRMLS_CC);
+		zend_throw_exception(spl_ce_RuntimeException, "WeakMap does not support [] (append)", 0 TSRMLS_CC);
 		return;
 	}
 
@@ -222,7 +192,17 @@ static inline void wr_weakmap_object_write_dimension_helper(wr_weakmap_object *i
 		return;
 	}
 
-	//TODO
+	if (!zend_hash_index_exists(&intern->map, Z_OBJ_HANDLE_P(offset))) {
+		// Object not already in the weakmap, we attach it
+		wr_store_attach((zend_object *)intern, wr_weakmap_ref_dtor, offset TSRMLS_CC);
+	}
+
+	Z_ADDREF_P(value);
+	if (zend_hash_index_update(&intern->map, Z_OBJ_HANDLE_P(offset), &value, sizeof(zval *), NULL) == FAILURE) {
+		zend_throw_exception(spl_ce_RuntimeException, "Failed to update the map", 0 TSRMLS_CC);
+		zval_ptr_dtor(&value);
+		return;
+	}
 }
 /* }}} */
 
@@ -256,7 +236,7 @@ static inline void wr_weakmap_object_unset_dimension_helper(wr_weakmap_object *i
 		return;
 	}
 
-	// TODO
+	zend_hash_index_del(&intern->map, Z_OBJ_HANDLE_P(offset));
 }
 /* }}} */
 
@@ -280,16 +260,12 @@ static void wr_weakmap_object_unset_dimension(zval *object, zval *offset TSRMLS_
 
 static inline int wr_weakmap_object_has_dimension_helper(wr_weakmap_object *intern, zval *offset, int check_empty TSRMLS_DC) /* {{{ */
 {
-	int retval = 0;
-	
 	if (Z_TYPE_P(offset) != IS_OBJECT) {
 		zend_throw_exception(spl_ce_RuntimeException, "Index is not an object", 0 TSRMLS_CC);
-		return;
+		return 0;
 	}
 
-	// TODO
-
-	return retval;
+	return zend_hash_index_exists(&intern->map, Z_OBJ_HANDLE_P(offset));
 }
 /* }}} */
 
@@ -319,8 +295,9 @@ static int wr_weakmap_object_has_dimension(zval *object, zval *offset, int check
 static int wr_weakmap_object_count_elements(zval *object, long *count TSRMLS_DC) /* {{{ */
 {
 	wr_weakmap_object *intern;
-	
+
 	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
+
 	if (intern->fptr_count) {
 		zval *rv;
 		zend_call_method_with_0_params(&object, intern->std.ce, &intern->fptr_count, "count", &rv);
@@ -335,8 +312,7 @@ static int wr_weakmap_object_count_elements(zval *object, long *count TSRMLS_DC)
 		}
 	}
 
-	// TODO
-	*count = 0;
+	*count = zend_hash_num_elements(&intern->map);
 	return SUCCESS;
 }
 /* }}} */
@@ -388,18 +364,18 @@ PHP_METHOD(WeakMap, offsetExists)
  Returns the value at the specified $index. */
 PHP_METHOD(WeakMap, offsetGet)
 {
-	zval                  *zindex, **value_pp;
+	zval               *zindex, *value_p;
 	wr_weakmap_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zindex) == FAILURE) {
 		return;
 	}
 
-	intern    = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	value_pp  = wr_weakmap_object_read_dimension_helper(intern, zindex TSRMLS_CC);
+	intern   = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	value_p  = wr_weakmap_object_read_dimension_helper(intern, zindex TSRMLS_CC);
 
-	if (value_pp) {
-		RETURN_ZVAL(*value_pp, 1, 0);
+	if (value_p) {
+		RETURN_ZVAL(value_p, 1, 0);
 	}
 	RETURN_NULL();
 } /* }}} */

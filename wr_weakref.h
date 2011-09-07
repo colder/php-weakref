@@ -23,6 +23,13 @@
 
 #include "php_weakref.h"
 
+typedef struct _wr_weakref_object {
+	zend_object            std;
+	zval                  *ref;
+	zend_bool              valid;
+	unsigned int           acquired;
+} wr_weakref_object;
+
 extern WEAKREF_API zend_class_entry *wr_ce_WeakRef;
 
 zend_object_handlers wr_handler_WeakRef;
