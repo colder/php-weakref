@@ -138,9 +138,9 @@ static zend_object_value wr_weakmap_object_new(zend_class_entry *class_type TSRM
 }
 /* }}} */
 
-static inline zval *wr_weakmap_object_read_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
+static inline zval **wr_weakmap_object_read_dimension_helper(wr_weakmap_object *intern, zval *offset TSRMLS_DC) /* {{{ */
 {
-	zval *retval;
+	zval **retval;
 
 	if (!offset || Z_TYPE_P(offset) != IS_OBJECT) {
 		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0 TSRMLS_CC);
@@ -158,7 +158,6 @@ static inline zval *wr_weakmap_object_read_dimension_helper(wr_weakmap_object *i
 static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int type TSRMLS_DC) /* {{{ */
 {
 	wr_weakmap_object *intern;
-	zval *retval;
 
 	intern = (wr_weakmap_object *)zend_object_store_get_object(object TSRMLS_CC);
 
@@ -172,13 +171,15 @@ static zval *wr_weakmap_object_read_dimension(zval *object, zval *offset, int ty
 			return rv;
 		}
 		return EG(uninitialized_zval_ptr);
-	}
+	} else {
+		zval **retval;
 
-	retval = wr_weakmap_object_read_dimension_helper(intern, offset TSRMLS_CC);
-	if (retval) {
-		return retval;
+		retval = wr_weakmap_object_read_dimension_helper(intern, offset TSRMLS_CC);
+		if (retval) {
+			return *retval;
+		}
+		return NULL;
 	}
-	return NULL;
 }
 /* }}} */
 
@@ -366,7 +367,7 @@ PHP_METHOD(WeakMap, offsetExists)
  Returns the value at the specified $index. */
 PHP_METHOD(WeakMap, offsetGet)
 {
-	zval               *zindex, *value_p;
+	zval               *zindex, **value_pp;
 	wr_weakmap_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zindex) == FAILURE) {
@@ -374,10 +375,10 @@ PHP_METHOD(WeakMap, offsetGet)
 	}
 
 	intern   = (wr_weakmap_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	value_p  = wr_weakmap_object_read_dimension_helper(intern, zindex TSRMLS_CC);
+	value_pp = wr_weakmap_object_read_dimension_helper(intern, zindex TSRMLS_CC);
 
-	if (value_p) {
-		RETURN_ZVAL(value_p, 1, 0);
+	if (value_pp) {
+		RETURN_ZVAL(*value_pp, 1, 0);
 	}
 	RETURN_NULL();
 } /* }}} */
