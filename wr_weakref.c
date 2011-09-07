@@ -75,27 +75,7 @@ static void wr_weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 	}
 
 	if (intern->valid) {
-		zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(intern->ref);
-		wr_store      *store           = WR_G(store);
-
-		wr_store_data *data            = &store->objs[ref_handle];
-		wr_ref_list   *prev            = NULL;
-		wr_ref_list   *cur             = data->wrefs_head;
-
-		while (cur && cur->obj != (zend_object *)intern) {
-			prev = cur;
-			cur  = cur->next;
-		}
-
-		assert(cur != NULL);
-
-		if (prev) {
-			prev->next = cur->next;
-		} else {
-			data->wrefs_head = cur->next;
-		}
-
-		efree(cur);
+		wr_store_detach((zend_object *)intern, Z_OBJ_HANDLE_P(intern->ref) TSRMLS_CC);
 	}
 
 	zend_object_std_dtor(&intern->std TSRMLS_CC);

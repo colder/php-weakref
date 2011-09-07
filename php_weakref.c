@@ -113,6 +113,31 @@ void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC)
 }
 /* }}} */
 
+void wr_store_detach(zend_object *intern, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
+{
+	wr_store      *store           = WR_G(store);
+
+	wr_store_data *data            = &store->objs[ref_handle];
+	wr_ref_list   *prev            = NULL;
+	wr_ref_list   *cur             = data->wrefs_head;
+
+	while (cur && cur->obj != intern) {
+		prev = cur;
+		cur  = cur->next;
+	}
+
+	assert(cur != NULL);
+
+	if (prev) {
+		prev->next = cur->next;
+	} else {
+		data->wrefs_head = cur->next;
+	}
+
+	efree(cur);
+}
+/* }}} */
+
 PHP_MINIT_FUNCTION(weakref) /* {{{ */
 {
 	PHP_MINIT(wr_weakref)(INIT_FUNC_ARGS_PASSTHRU);

@@ -41,13 +41,23 @@ static void wr_weakmap_ref_dtor(void *ref_object, zend_object_handle ref_handle,
 
 static void wr_weakmap_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {
-
+	HashPosition       map_pos;
 	wr_weakmap_object *intern     = (wr_weakmap_object *)object;
+
+	zend_hash_internal_pointer_reset_ex(&intern->map, &map_pos);
+	while(zend_hash_has_more_elements_ex(&intern->map, &map_pos) == SUCCESS) {
+		ulong index;
+		zend_hash_get_current_key_ex(&intern->map, NULL, NULL, &index, 0, &map_pos);
+
+		wr_store_detach(intern, (zend_object_handle)index TSRMLS_CC);
+
+		zend_hash_move_forward_ex(&intern->map, &map_pos);
+	}
 
 	zend_object_std_dtor(&intern->std TSRMLS_CC);
 
-	zend_hash_destroy(&intern->map);
 
+	zend_hash_destroy(&intern->map);
 	efree(intern);
 }
 /* }}} */
@@ -239,7 +249,9 @@ static inline void wr_weakmap_object_unset_dimension_helper(wr_weakmap_object *i
 		return;
 	}
 
-	zend_hash_index_del(&intern->map, Z_OBJ_HANDLE_P(offset));
+	if (zend_hash_index_del(&intern->map, Z_OBJ_HANDLE_P(offset)) == SUCCESS) {
+		wr_store_detach(intern, Z_OBJ_HANDLE_P(offset) TSRMLS_CC);
+	}
 }
 /* }}} */
 
