@@ -41,21 +41,19 @@ static void wr_weakmap_ref_dtor(void *ref_object, zend_object_handle ref_handle,
 
 static void wr_weakmap_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 {
-	HashPosition       map_pos;
 	wr_weakmap_object *intern     = (wr_weakmap_object *)object;
 
-	zend_hash_internal_pointer_reset_ex(&intern->map, &map_pos);
-	while(zend_hash_has_more_elements_ex(&intern->map, &map_pos) == SUCCESS) {
+	zend_hash_internal_pointer_reset_ex(&intern->map, &intern->pos);
+	while(zend_hash_has_more_elements_ex(&intern->map, &intern->pos) == SUCCESS) {
 		ulong index;
-		zend_hash_get_current_key_ex(&intern->map, NULL, NULL, &index, 0, &map_pos);
+		zend_hash_get_current_key_ex(&intern->map, NULL, NULL, &index, 0, &intern->pos);
 
 		wr_store_detach(intern, (zend_object_handle)index TSRMLS_CC);
 
-		zend_hash_move_forward_ex(&intern->map, &map_pos);
+		zend_hash_move_forward_ex(&intern->map, &intern->pos);
 	}
 
 	zend_object_std_dtor(&intern->std TSRMLS_CC);
-
 
 	zend_hash_destroy(&intern->map);
 	efree(intern);
@@ -427,6 +425,82 @@ PHP_METHOD(WeakMap, offsetUnset)
 
 } /* }}} */
 
+/* {{{ proto void WeakMap::rewind()
+ Rewind to first position */
+PHP_METHOD(WeakMap, rewind)
+{
+	wr_weakmap_object *intern = (wr_weakmap_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
+
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+
+	zend_hash_internal_pointer_reset_ex(&intern->map, &intern->pos);
+} /* }}} */
+
+/* {{{ proto bool WeakMap::valid()
+ Returns whether current position is valid */
+PHP_METHOD(WeakMap, valid)
+{
+	wr_weakmap_object *intern = (wr_weakmap_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
+	
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+	
+	RETURN_BOOL(zend_hash_has_more_elements_ex(&intern->map, &intern->pos) == SUCCESS);
+} /* }}} */
+
+/* {{{ proto mixed WeakMap::key()
+ Returns current key */
+PHP_METHOD(WeakMap, key)
+{
+	wr_weakmap_object *intern = (wr_weakmap_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
+	ulong index;
+	zval **element;
+	
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+	
+	zend_hash_get_current_key_ex(&intern->map, NULL, NULL, &index, 0, &intern->pos);
+
+	if (zend_hash_get_current_data_ex(&intern->map, (void**)&element, &intern->pos) == FAILURE) {
+		return;
+	}
+	RETVAL_ZVAL(*element, 1, 0);
+} /* }}} */
+
+/* {{{ proto mixed WeakMap::current()
+ Returns current element */
+PHP_METHOD(WeakMap, current)
+{
+	zval **element;
+	wr_weakmap_object *intern = (wr_weakmap_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
+	
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+	
+	if (zend_hash_get_current_data_ex(&intern->map, (void**)&element, &intern->pos) == FAILURE) {
+		return;
+	}
+	RETVAL_ZVAL(*element, 1, 0);
+} /* }}} */
+
+/* {{{ proto void SplObjectStorage::next()
+ Moves position forward */
+PHP_METHOD(WeakMap, next)
+{
+	wr_weakmap_object *intern = (wr_weakmap_object*)zend_object_store_get_object(getThis() TSRMLS_CC);
+	
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+	
+	zend_hash_move_forward_ex(&intern->map, &intern->pos);
+} /* }}} */
+
 /*  Function/Class/Method definitions */
 ZEND_BEGIN_ARG_INFO(arginfo_wr_weakmap_void, 0)
 ZEND_END_ARG_INFO()
@@ -443,10 +517,17 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry wr_funcs_WeakMap[] = {
 	PHP_ME(WeakMap, __construct,     arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
 	PHP_ME(WeakMap, count,           arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	/* ArrayAccess */
 	PHP_ME(WeakMap, offsetExists,    arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
 	PHP_ME(WeakMap, offsetGet,       arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
 	PHP_ME(WeakMap, offsetSet,       arginfo_wr_weakmap_obj_val,   ZEND_ACC_PUBLIC)
 	PHP_ME(WeakMap, offsetUnset,     arginfo_wr_weakmap_obj,       ZEND_ACC_PUBLIC)
+	/* Iterator */
+	PHP_ME(WeakMap,  rewind,         arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap,  valid,          arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap,  key,            arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap,  current,        arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
+	PHP_ME(WeakMap,  next,           arginfo_wr_weakmap_void,      ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -471,7 +552,7 @@ PHP_MINIT_FUNCTION(wr_weakmap) /* {{{ */
 	wr_handler_WeakMap.has_dimension   = wr_weakmap_object_has_dimension;
 	wr_handler_WeakMap.count_elements  = wr_weakmap_object_count_elements;
 
-	zend_class_implements(wr_ce_WeakMap TSRMLS_CC, 2, spl_ce_Countable, spl_ce_ArrayAccess);
+	zend_class_implements(wr_ce_WeakMap TSRMLS_CC, 3, spl_ce_Countable, spl_ce_ArrayAccess, spl_ce_Iterator);
 
 	return SUCCESS;
 }

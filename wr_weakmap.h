@@ -26,6 +26,7 @@
 typedef struct _wr_weakmap_object {
 	zend_object            std;
 	HashTable              map;
+	HashPosition           pos;
 	zend_function         *fptr_offset_get;
 	zend_function         *fptr_offset_set;
 	zend_function         *fptr_offset_has;
