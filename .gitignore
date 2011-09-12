@@ -27,3 +27,5 @@ install-sh
 .libs
 *.lo
 *.la
+*.swp
+test.php
