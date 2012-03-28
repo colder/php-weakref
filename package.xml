@@ -17,8 +17,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2011-08-17</date>
  <version>
-  <release>0.1.0</release>
-  <api>0.1.0</api>
+  <release>0.2.0</release>
+  <api>0.2.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -26,15 +26,20 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
-- First release.
+- Fixes crashes and bugs.
+- Implement weakmap.
  </notes>
  <contents>
   <dir name="/">
    <file role='doc' name='CREDITS'/>
    <file role='src' name='config.m4'/>
    <file role='src' name='config.w32'/>
-   <file role='src' name='weakref.c'/>
-   <file role='src' name='weakref.h'/>
+   <file role='src' name='php_weakref.c'/>
+   <file role='src' name='php_weakref.h'/>
+   <file role='src' name='wr_weakref.c'/>
+   <file role='src' name='wr_weakref.h'/>
+   <file role='src' name='wr_weakmap.c'/>
+   <file role='src' name='wr_weakmap.h'/>
   </dir> <!-- / -->
  </contents>
  <dependencies>
@@ -52,6 +57,15 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>weakref</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <stability><release>beta</release><api>beta</api></stability>
+   <version><release>0.2.0</release><api>0.2.0</api></version>
+   <date>2012-03-28</date>
+   <notes>
+- Fixes crashes and bugs.
+- Implement weakmap.
+   </notes>
+  </release>
   <release>
    <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.1.0</release><api>0.1.0</api></version>
