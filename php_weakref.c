@@ -56,11 +56,14 @@ void wr_store_dtor(void *ref_object, zend_object_handle ref_handle TSRMLS_DC) /*
 	wr_store                  *store      = WR_G(store);
 	zend_objects_store_dtor_t  orig_dtor  = store->objs[ref_handle].orig_dtor;
 	wr_store_data              data       = store->objs[ref_handle];
-	wr_ref_list               *list_entry = data.wrefs_head;
+	wr_ref_list               *list_entry;
 
 	EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = data.orig_dtor;
 
 	orig_dtor(ref_object, ref_handle TSRMLS_CC);
+
+	/* data might have changed if the destructor freed weakrefs, we reload from store */
+	list_entry = store->objs[ref_handle].wrefs_head;
 
 	while (list_entry != NULL) {
 		wr_ref_list *next = list_entry->next;
