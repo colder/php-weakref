@@ -37,6 +37,9 @@
 
 #include "wr_weakref.h"
 
+extern zend_module_entry weakref_module_entry;
+#define phpext_weakref_ptr &weakref_module_entry
+
 PHP_MINFO_FUNCTION(weakref);
 
 PHP_MINIT_FUNCTION(weakref);
