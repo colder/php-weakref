@@ -1,5 +1,5 @@
 --TEST--
-Weakref: Destroying the weakred within the std dtor of the object
+Weakref: Destroying the weakref within the std dtor of the object
 --FILE--
 <?php
 
