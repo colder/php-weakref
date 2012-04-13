@@ -120,24 +120,31 @@ void wr_store_detach(zend_object *intern, zend_object_handle ref_handle TSRMLS_D
 {
 	wr_store      *store           = WR_G(store);
 
-	wr_store_data *data            = &store->objs[ref_handle];
-	wr_ref_list   *prev            = NULL;
-	wr_ref_list   *cur             = data->wrefs_head;
-
-	while (cur && cur->obj != intern) {
-		prev = cur;
-		cur  = cur->next;
-	}
-
-	assert(cur != NULL);
-
-	if (prev) {
-		prev->next = cur->next;
+	if (!store) {
+		// detach() can be called after the store has already been cleaned up,
+		// depending on the shutdown sequence (i.e. in case of a fatal).
+		// See tests/weakref_007.phpt
+		return;
 	} else {
-		data->wrefs_head = cur->next;
-	}
+		wr_store_data *data            = &store->objs[ref_handle];
+		wr_ref_list   *prev            = NULL;
+		wr_ref_list   *cur             = data->wrefs_head;
 
-	efree(cur);
+		while (cur && cur->obj != intern) {
+			prev = cur;
+			cur  = cur->next;
+		}
+
+		assert(cur != NULL);
+
+		if (prev) {
+			prev->next = cur->next;
+		} else {
+			data->wrefs_head = cur->next;
+		}
+
+		efree(cur);
+	}
 }
 /* }}} */
 
