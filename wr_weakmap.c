@@ -468,7 +468,7 @@ PHP_METHOD(WeakMap, key)
 	if (zend_hash_get_current_data_ex(&intern->map, (void**)&element, &intern->pos) == FAILURE) {
 		return;
 	}
-	RETVAL_ZVAL(*element, 1, 0);
+	RETVAL_LONG(index);
 } /* }}} */
 
 /* {{{ proto mixed WeakMap::current()
