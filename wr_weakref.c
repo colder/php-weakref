@@ -33,14 +33,16 @@
 static void wr_weakref_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
 	wr_weakref_object *wref = (wr_weakref_object *)wref_obj;
 	wref->valid = 0;
-	wref->ref = NULL;
 }
 /* }}} */
 
 static int wr_weakref_ref_acquire(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 {
 	if (intern->valid) {
-		Z_ADDREF_P(intern->ref);
+		if (intern->acquired == 0) {
+			// We need to register that ref so that the object doesn't get collected
+			Z_OBJ_HANDLER_P(intern->ref, add_ref)(intern->ref TSRMLS_CC);
+		}
 		intern->acquired++;
 		return SUCCESS;
 	} else {
@@ -52,9 +54,11 @@ static int wr_weakref_ref_acquire(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 static int wr_weakref_ref_release(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 {
 	if (intern->valid && (intern->acquired > 0)) {
-		zval *ref_tmp = intern->ref;
-		zval_ptr_dtor(&ref_tmp);
 		intern->acquired--;
+		if (intern->acquired == 0) {
+			// We need to register that ref so that the object doesn't get collected
+			Z_OBJ_HANDLER_P(intern->ref, del_ref)(intern->ref TSRMLS_CC);
+		}
 		return SUCCESS;
 	} else {
 		return FAILURE;
@@ -62,7 +66,7 @@ static int wr_weakref_ref_release(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 }
 /* }}} */
 
-static void wr_weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
+static void wr_weakref_object_free_storage(void *object TSRMLS_DC ZEND_FILE_LINE_DC) /* {{{ */
 {
 	wr_weakref_object *intern     = (wr_weakref_object *)object;
 
@@ -76,6 +80,11 @@ static void wr_weakref_object_free_storage(void *object TSRMLS_DC) /* {{{ */
 
 	if (intern->valid) {
 		wr_store_detach((zend_object *)intern, Z_OBJ_HANDLE_P(intern->ref) TSRMLS_CC);
+	}
+
+	if (intern->ref) {
+		Z_TYPE_P(intern->ref) = IS_NULL;
+		zval_ptr_dtor(&intern->ref);
 	}
 
 	zend_object_std_dtor(&intern->std TSRMLS_CC);
@@ -111,7 +120,8 @@ static zend_object_value wr_weakref_object_new_ex(zend_class_entry *class_type, 
 			int acquired = 0;
 
 			intern->valid = other->valid;
-			intern->ref   = other->ref;
+			ALLOC_INIT_ZVAL(intern->ref);
+			ZVAL_COPY_VALUE(intern->ref, other->ref);
 			wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, other->ref TSRMLS_CC);
 
 			for (acquired = 0; acquired < other->acquired; acquired++) {
@@ -134,7 +144,7 @@ static zend_object_value wr_weakref_object_new_ex(zend_class_entry *class_type, 
 		intern->acquired = 0;
 	}
 
-	retval.handle   = zend_objects_store_put(intern, (zend_objects_store_dtor_t)zend_objects_destroy_object, wr_weakref_object_free_storage, NULL TSRMLS_CC);
+	retval.handle   = zend_objects_store_put(intern, (zend_objects_store_dtor_t)zend_objects_destroy_object, (zend_objects_free_object_storage_t)wr_weakref_object_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &wr_handler_WeakRef;
 
 	return retval;
@@ -259,9 +269,11 @@ PHP_METHOD(WeakRef, __construct)
 
 	intern = (wr_weakref_object *)zend_object_store_get_object(object TSRMLS_CC);
 
-	intern->ref   = ref;
+	ALLOC_INIT_ZVAL(intern->ref);
 
-	wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, ref TSRMLS_CC);
+	ZVAL_COPY_VALUE(intern->ref, ref);
+
+	wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, intern->ref TSRMLS_CC);
 
 	intern->valid = 1;
 }
