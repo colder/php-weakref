@@ -56,7 +56,7 @@ static int wr_weakref_ref_release(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 	if (intern->valid && (intern->acquired > 0)) {
 		intern->acquired--;
 		if (intern->acquired == 0) {
-			// We need to register that ref so that the object doesn't get collected
+			// We need to unregister that ref so that the object can get collected
 			Z_OBJ_HANDLER_P(intern->ref, del_ref)(intern->ref TSRMLS_CC);
 		}
 		return SUCCESS;
