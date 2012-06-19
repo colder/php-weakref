@@ -6,6 +6,8 @@ information to objects. Indeed, the cache entry should not be preventing the
 garbage collection of the object AND the cached info when the object is no
 longer used.
 
+More information about releases can be found on http://pecl.php.net/weakref
+
 ## Weakref
 The weakref class is a simple class that allows to access its referenced object
 as long as it exists. Unlike other references, having this Weakref object will
