@@ -121,7 +121,10 @@ static zend_object_value wr_weakref_object_new_ex(zend_class_entry *class_type, 
 
 			intern->valid = other->valid;
 			ALLOC_INIT_ZVAL(intern->ref);
-			ZVAL_COPY_VALUE(intern->ref, other->ref);
+			// ZVAL_COPY_VALUE
+			intern->ref->value = other->ref->value;
+			Z_TYPE_P(intern->ref) = Z_TYPE_P(other->ref);
+
 			wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, other->ref TSRMLS_CC);
 
 			for (acquired = 0; acquired < other->acquired; acquired++) {
@@ -271,7 +274,9 @@ PHP_METHOD(WeakRef, __construct)
 
 	ALLOC_INIT_ZVAL(intern->ref);
 
-	ZVAL_COPY_VALUE(intern->ref, ref);
+	// ZVAL_COPY_VALUE
+	intern->ref->value = ref->value;
+	Z_TYPE_P(intern->ref) = Z_TYPE_P(ref);
 
 	wr_store_attach((zend_object *)intern, wr_weakref_ref_dtor, intern->ref TSRMLS_CC);
 
