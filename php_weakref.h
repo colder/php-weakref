@@ -75,10 +75,10 @@ void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC)
 
 #ifdef ZTS
 #define WR_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)
-int weakref_globals_id;
+extern int weakref_globals_id;
 #else
 #define WR_G(v) (weakref_globals.v)
-zend_weakref_globals weakref_globals;
+extern zend_weakref_globals weakref_globals;
 #endif
 
 #endif /* PHP_WEAKREF_H */
