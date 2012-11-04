@@ -29,6 +29,12 @@
 #include "wr_weakmap.h"
 #include "php_weakref.h"
 
+#ifdef ZTS
+int weakref_globals_id;
+#else
+zend_weakref_globals weakref_globals;
+#endif
+
 void wr_store_init(TSRMLS_D) /* {{{ */
 {
 	wr_store *store = emalloc(sizeof(wr_store));

@@ -36,9 +36,6 @@ typedef struct _wr_weakmap_object {
 
 extern WEAKREF_API zend_class_entry *wr_ce_WeakMap;
 
-zend_object_handlers wr_handler_WeakMap;
-WEAKREF_API zend_class_entry  *wr_ce_WeakMap;
-
 #endif /* WR_WEAKMAP_H */
 
 /*

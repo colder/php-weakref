@@ -31,6 +31,9 @@
 #include "wr_weakmap.h"
 #include "php_weakref.h"
 
+zend_object_handlers wr_handler_WeakMap;
+WEAKREF_API zend_class_entry  *wr_ce_WeakMap;
+
 
 static void wr_weakmap_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
 	wr_weakmap_object *intern = (wr_weakmap_object *)wref_obj;
