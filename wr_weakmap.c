@@ -337,7 +337,7 @@ static int wr_weakmap_object_count_elements(zval *object, long *count TSRMLS_DC)
 */
 PHP_METHOD(WeakMap, __construct)
 {
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 }
@@ -350,7 +350,7 @@ PHP_METHOD(WeakMap, count)
 	zval *object = getThis();
 	wr_weakmap_object *intern;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 

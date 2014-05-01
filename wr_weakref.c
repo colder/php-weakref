@@ -189,7 +189,7 @@ PHP_METHOD(WeakRef, get)
 	zval *object = getThis();
 	wr_weakref_object *intern;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 
@@ -210,7 +210,7 @@ PHP_METHOD(WeakRef, acquire)
 	zval *object = getThis();
 	wr_weakref_object *intern;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 
@@ -231,7 +231,7 @@ PHP_METHOD(WeakRef, release)
 	zval *object = getThis();
 	wr_weakref_object *intern;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 
@@ -252,7 +252,7 @@ PHP_METHOD(WeakRef, valid)
 	zval *object = getThis();
 	wr_weakref_object *intern;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "")) {
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 
