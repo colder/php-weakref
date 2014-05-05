@@ -23,7 +23,7 @@
 
 #include <php.h>
 
-#define PHP_WEAKREF_VERSION "0.0.1-alpha"
+#define PHP_WEAKREF_VERSION "0.2.4-beta"
 
 #ifdef PHP_WIN32
 #define WEAKREF_API __declspec(dllexport)

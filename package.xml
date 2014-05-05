@@ -15,10 +15,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>colder@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-05-01</date>
+ <date>2014-05-05</date>
  <version>
-  <release>0.2.3</release>
-  <api>0.2.3</api>
+  <release>0.2.4</release>
+  <api>0.2.4</api>
  </version>
  <stability>
   <release>beta</release>
@@ -31,6 +31,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <contents>
   <dir name="/">
    <file role='doc' name='CREDITS'/>
+   <file role='doc' name='README.md'/>
+   <file role='doc' name='LICENSE'/>
    <file role='src' name='config.m4'/>
    <file role='src' name='config.w32'/>
    <file role='src' name='php_weakref.c'/>
@@ -56,6 +58,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>weakref</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <stability><release>beta</release><api>beta</api></stability>
+   <version><release>0.2.4</release><api>0.2.4</api></version>
+   <date>2014-05-05</date>
+   <notes>
+- Fix version and add license
+   </notes>
+  </release>
   <release>
    <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.2.3</release><api>0.2.3</api></version>
