@@ -71,6 +71,9 @@ void wr_store_dtor(void *ref_object, zend_object_handle ref_handle TSRMLS_DC) /*
 	/* data might have changed if the destructor freed weakrefs, we reload from store */
 	list_entry = store->objs[ref_handle].wrefs_head;
 
+	/* Invalidate wrefs_head while dtoring, to prevent detach on same wr */
+	store->objs[ref_handle].wrefs_head = NULL;
+
 	while (list_entry != NULL) {
 		wr_ref_list *next = list_entry->next;
 		list_entry->dtor(ref_object, ref_handle, list_entry->obj TSRMLS_CC);
@@ -135,6 +138,11 @@ void wr_store_detach(zend_object *intern, zend_object_handle ref_handle TSRMLS_D
 		wr_store_data *data            = &store->objs[ref_handle];
 		wr_ref_list   *prev            = NULL;
 		wr_ref_list   *cur             = data->wrefs_head;
+
+		if (!cur) {
+			// We are detaching from a wr that is being dtored, skip
+			return;
+		}
 
 		while (cur && cur->obj != intern) {
 			prev = cur;
