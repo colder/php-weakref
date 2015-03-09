@@ -32,13 +32,6 @@
 zend_object_handlers wr_handler_WeakRef;
 WEAKREF_API zend_class_entry  *wr_ce_WeakRef;
 
-
-static void wr_weakref_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
-	wr_weakref_object *wref = (wr_weakref_object *)wref_obj;
-	wref->valid = 0;
-}
-/* }}} */
-
 static int wr_weakref_ref_acquire(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 {
 	if (intern->valid) {
@@ -66,6 +59,21 @@ static int wr_weakref_ref_release(wr_weakref_object *intern TSRMLS_DC) /* {{{ */
 	} else {
 		return FAILURE;
 	}
+}
+/* }}} */
+
+static void wr_weakref_ref_dtor(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC) { /* {{{ */
+    wr_weakref_object *wref = (wr_weakref_object *)wref_obj;
+    
+    while (wref->valid && wref->acquired > 0) {
+        if (wr_weakref_ref_release(wref TSRMLS_CC) != SUCCESS) {
+            // shouldn't occur
+            zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly release the reference on destruct", 0 TSRMLS_CC);
+            break;
+        }
+    }
+    
+    wref->valid = 0;
 }
 /* }}} */
 
