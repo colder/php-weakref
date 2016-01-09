@@ -26,7 +26,8 @@
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
 #include "wr_weakref.h"
-#include "wr_weakmap.h"
+//#include "wr_weakmap.h" FIXME
+#include "wr_store.h"
 #include "php_weakref.h"
 
 #ifdef ZTS
@@ -34,133 +35,6 @@ int weakref_globals_id;
 #else
 zend_weakref_globals weakref_globals;
 #endif
-
-void wr_store_init(TSRMLS_D) /* {{{ */
-{
-	wr_store *store = emalloc(sizeof(wr_store));
-	store->objs = emalloc(sizeof(wr_store_data));
-	store->size = 1;
-
-	WR_G(store) = store;
-} /* }}} */
-
-void wr_store_destroy(TSRMLS_D) /* {{{ */
-{
-	wr_store *store = WR_G(store);
-
-	if (store->objs != NULL) {
-		efree(store->objs);
-	}
-
-	efree(store);
-
-	WR_G(store) = NULL;
-} /* }}} */
-
-void wr_store_dtor(void *ref_object, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
-{
-	wr_store                  *store      = WR_G(store);
-	zend_objects_store_dtor_t  orig_dtor  = store->objs[ref_handle].orig_dtor;
-	wr_store_data              data       = store->objs[ref_handle];
-	wr_ref_list               *list_entry;
-
-	EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = data.orig_dtor;
-
-	orig_dtor(ref_object, ref_handle TSRMLS_CC);
-
-	/* data might have changed if the destructor freed weakrefs, we reload from store */
-	list_entry = store->objs[ref_handle].wrefs_head;
-
-	/* Invalidate wrefs_head while dtoring, to prevent detach on same wr */
-	store->objs[ref_handle].wrefs_head = NULL;
-
-	while (list_entry != NULL) {
-		wr_ref_list *next = list_entry->next;
-		list_entry->dtor(ref_object, ref_handle, list_entry->obj TSRMLS_CC);
-		efree(list_entry);
-		list_entry = next;
-	}
-}
-/* }}} */
-
-void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC) /* {{{ */
-{
-	wr_store           *store      = WR_G(store);
-	zend_object_handle  ref_handle = Z_OBJ_HANDLE_P(ref);
-	wr_store_data      *data       = NULL;
-
-	while (ref_handle >= store->size) {
-		store->size <<= 2;
-		store->objs = erealloc(store->objs, store->size * sizeof(wr_store_data));
-	}
-
-	data = &store->objs[ref_handle];
-
-	if (EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor == wr_store_dtor) {
-		wr_ref_list *next = emalloc(sizeof(wr_ref_list));
-		next->obj  = intern;
-		next->dtor = dtor;
-		next->next = NULL;
-
-		if (data->wrefs_head) {
-			wr_ref_list *list_entry = data->wrefs_head;
-
-			while (list_entry->next != NULL) {
-				list_entry = list_entry->next;
-			}
-
-			list_entry->next = next;
-		} else {
-			data->wrefs_head = next;
-		}
-	} else {
-		data->orig_dtor = EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor;
-		EG(objects_store).object_buckets[ref_handle].bucket.obj.dtor = wr_store_dtor;
-
-        data->wrefs_head = emalloc(sizeof(wr_ref_list));
-		data->wrefs_head->obj  = intern;
-		data->wrefs_head->dtor = dtor;
-		data->wrefs_head->next = NULL;
-	}
-}
-/* }}} */
-
-void wr_store_detach(zend_object *intern, zend_object_handle ref_handle TSRMLS_DC) /* {{{ */
-{
-	wr_store      *store           = WR_G(store);
-
-	if (!store) {
-		// detach() can be called after the store has already been cleaned up,
-		// depending on the shutdown sequence (i.e. in case of a fatal).
-		// See tests/weakref_007.phpt
-		return;
-	} else {
-		wr_store_data *data            = &store->objs[ref_handle];
-		wr_ref_list   *prev            = NULL;
-		wr_ref_list   *cur             = data->wrefs_head;
-
-		if (!cur) {
-			// We are detaching from a wr that is being dtored, skip
-			return;
-		}
-
-		while (cur && cur->obj != intern) {
-			prev = cur;
-			cur  = cur->next;
-		}
-
-		assert(cur != NULL);
-
-		if (prev) {
-			prev->next = cur->next;
-		} else {
-			data->wrefs_head = cur->next;
-		}
-
-		efree(cur);
-	}
-}
-/* }}} */
 
 PHP_MINIT_FUNCTION(weakref) /* {{{ */
 {
@@ -177,7 +51,6 @@ PHP_RINIT_FUNCTION(weakref) /* {{{ */
 PHP_RSHUTDOWN_FUNCTION(weakref) /* {{{ */
 {
 	wr_store_destroy(TSRMLS_C);
-
 	return SUCCESS;
 }
 /* }}} */

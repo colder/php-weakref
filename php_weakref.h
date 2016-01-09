@@ -36,6 +36,7 @@
 #endif
 
 #include "wr_weakref.h"
+#include "wr_store.h"
 
 extern zend_module_entry weakref_module_entry;
 #define phpext_weakref_ptr &weakref_module_entry
@@ -46,32 +47,9 @@ PHP_MINIT_FUNCTION(weakref);
 PHP_RINIT_FUNCTION(weakref);
 PHP_RSHUTDOWN_FUNCTION(weakref);
 
-typedef void (*wr_ref_dtor)(void *ref_object, zend_object_handle ref_handle, zend_object *wref_obj TSRMLS_DC);
-
-typedef struct _wr_ref_list {
-	zend_object              *obj;
-	wr_ref_dtor          dtor;
-	struct _wr_ref_list *next;
-} wr_ref_list;
-
-typedef struct _wr_store_data {
-	zend_objects_store_dtor_t  orig_dtor;
-	wr_ref_list          *wrefs_head;
-} wr_store_data;
-
-typedef struct _wr_store {
-	wr_store_data *objs;
-	uint size;
-} wr_store;
-
 ZEND_BEGIN_MODULE_GLOBALS(weakref)
     wr_store *store;
 ZEND_END_MODULE_GLOBALS(weakref)
-
-void wr_store_init(TSRMLS_D);
-void wr_store_destroy(TSRMLS_D);
-void wr_store_dtor(void *object, zend_object_handle ref_handle TSRMLS_DC);
-void wr_store_attach(zend_object *intern, wr_ref_dtor dtor, zval *ref TSRMLS_DC);
 
 #ifdef ZTS
 #define WR_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)

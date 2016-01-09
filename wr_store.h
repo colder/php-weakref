@@ -18,23 +18,42 @@
 
 /* $Id$ */
 
-#ifndef WR_WEAKREF_H
-#define WR_WEAKREF_H
+#ifndef WR_STORE_H
+#define WR_STORE_H
 
-#include "php_weakref.h"
-#include "wr_store.h"
+#include <php.h>
 
-typedef struct _wr_weakref_object {
-	wr_store              *store;
-	zend_object           *ref_obj;
-	zend_bool              valid;
-	unsigned int           acquired;
-	zend_object            std;
-} wr_weakref_object;
+#ifdef ZTS
+#include "TSRM.h"
+#endif
 
-extern WEAKREF_API zend_class_entry *wr_ce_WeakRef;
+#include "wr_weakref.h"
 
-#endif /* WR_WEAKREF_H */
+typedef void (*wr_ref_dtor)(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC);
+
+typedef struct _wr_ref_list {
+	zend_object         *wref_obj;
+	wr_ref_dtor          dtor;
+	struct _wr_ref_list *next;
+} wr_ref_list;
+
+typedef struct _wr_store_data {
+	zend_object_dtor_obj_t  orig_dtor;
+	wr_ref_list            *wrefs_head;
+} wr_store_data;
+
+typedef struct _wr_store {
+	wr_store_data *objs;
+	uint size;
+} wr_store;
+
+void wr_store_init(TSRMLS_D);
+void wr_store_destroy(TSRMLS_D);
+void wr_store_tracked_object_dtor(zend_object *ref_obj);
+void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj TSRMLS_DC);
+void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC);
+
+#endif /* PHP_WEAKREF_H */
 
 /*
  * Local Variables:

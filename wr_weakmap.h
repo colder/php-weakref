@@ -24,14 +24,9 @@
 #include "php_weakref.h"
 
 typedef struct _wr_weakmap_object {
-	zend_object            std;
 	HashTable              map;
 	HashPosition           pos;
-	zend_function         *fptr_offset_get;
-	zend_function         *fptr_offset_set;
-	zend_function         *fptr_offset_has;
-	zend_function         *fptr_offset_del;
-	zend_function         *fptr_count;
+	zend_object            std;
 } wr_weakmap_object;
 
 extern WEAKREF_API zend_class_entry *wr_ce_WeakMap;
