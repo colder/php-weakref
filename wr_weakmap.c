@@ -43,6 +43,7 @@ static inline wr_weakmap_object* wr_weakmap_fetch(zend_object *obj) {
 
 static void wr_weakmap_ref_dtor(zend_object *wmap_obj, zend_object *ref_obj TSRMLS_DC) { /* {{{ */
 	wr_weakmap_object *wmap = wr_weakmap_fetch(wmap_obj);
+
 	zend_hash_index_del(&wmap->map, ref_obj->handle);
 }
 /* }}} */
@@ -51,17 +52,25 @@ static void wr_weakmap_object_free_storage(zend_object *wmap_obj) /* {{{ */
 {
 	wr_weakmap_object *wmap = wr_weakmap_fetch(wmap_obj);
 
-	ulong handle;
+	wr_weakmap_refval *refval;
 
-	ZEND_HASH_FOREACH_NUM_KEY(&wmap->map, handle) {
-		wr_store_untrack(wmap_obj, handle TSRMLS_CC);
+	ZEND_HASH_FOREACH_PTR(&wmap->map, refval) {
+		wr_store_untrack(wmap_obj, refval->ref TSRMLS_CC);
 	} ZEND_HASH_FOREACH_END();
 
-	zend_object_std_dtor(&wmap->std TSRMLS_CC);
-
 	zend_hash_destroy(&wmap->map);
+
+	zend_object_std_dtor(&wmap->std TSRMLS_CC);
 }
 /* }}} */
+
+static void wr_weakmap_refval_dtor(zval *data) /* {{{ */
+{
+	wr_weakmap_refval *refval = Z_PTR_P(data);
+	zval_ptr_dtor(refval->val);
+
+	efree(refval);
+}
 
 static zend_object* wr_weakmap_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* {{{ */
 {
@@ -69,7 +78,7 @@ static zend_object* wr_weakmap_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 
 	zend_object_std_init(&wmap->std, ce TSRMLS_CC);
 
-	zend_hash_init(&wmap->map, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(&wmap->map, 0, NULL, wr_weakmap_refval_dtor, 0);
 
 	wmap->std.handlers = &wr_handler_WeakMap;
 
@@ -150,7 +159,12 @@ PHP_METHOD(WeakMap, offsetGet)
 		return;
 	}
 
-	RETURN_ZVAL(zend_hash_index_find(&wmap->map, Z_OBJ_HANDLE_P(ref_zv)), 1, 0);
+	wr_weakmap_refval *refval = zend_hash_index_find_ptr(&wmap->map, Z_OBJ_HANDLE_P(ref_zv));
+	if (refval) {
+		RETURN_ZVAL(refval->val, 1, 0);
+	} else {
+		RETURN_NULL();
+	}
 } /* }}} */
 
 /* {{{ proto void WeakMap::offsetSet(object $index, mixed $newval) U
@@ -171,7 +185,12 @@ PHP_METHOD(WeakMap, offsetSet)
 
 	Z_ADDREF_P(val_zv);
 
-	zend_hash_index_update(&wmap->map, Z_OBJ_HANDLE_P(ref_zv), val_zv);
+	wr_weakmap_refval *refval = emalloc(sizeof(wr_weakmap_refval));
+
+	refval->ref = Z_OBJ_P(ref_zv);
+	refval->val = val_zv;
+
+	zend_hash_index_update_ptr(&wmap->map, Z_OBJ_HANDLE_P(ref_zv), refval);
 } /* }}} */
 
 /* {{{ proto void WeakMap::offsetUnset(mixed $index) U
@@ -223,7 +242,17 @@ PHP_METHOD(WeakMap, key)
 {
 	wr_weakmap_object *wmap = Z_WEAKMAP_OBJ_P(getThis());
 
-	return;
+	zval *refval_zv = zend_hash_get_current_data_ex(&wmap->map, &wmap->pos);
+
+	if (refval_zv) {
+		wr_weakmap_refval *refval = Z_PTR_P(refval_zv);
+		zval ret;
+		ZVAL_OBJ(&ret, refval->ref);
+
+		RETURN_ZVAL(&ret, 1, 0);
+	} else {
+		RETURN_NULL();
+	}
 } /* }}} */
 
 /* {{{ proto mixed WeakMap::current()
@@ -236,7 +265,14 @@ PHP_METHOD(WeakMap, current)
 		return;
 	}
 
-	RETURN_ZVAL(zend_hash_get_current_data_ex(&wmap->map, &wmap->pos), 1, 0);
+	zval *refval_zv = zend_hash_get_current_data_ex(&wmap->map, &wmap->pos);
+
+	if (refval_zv) {
+		wr_weakmap_refval *refval = Z_PTR_P(refval_zv);
+		RETURN_ZVAL(refval->val, 1, 0);
+	} else {
+		RETURN_NULL();
+	}
 } /* }}} */
 
 /* {{{ proto void SplObjectStorage::next()

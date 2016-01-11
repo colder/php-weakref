@@ -29,6 +29,11 @@ typedef struct _wr_weakmap_object {
 	zend_object            std;
 } wr_weakmap_object;
 
+typedef struct _wr_weakmap_refval {
+	zend_object *ref;
+	zval        *val;
+} wr_weakmap_refval;
+
 extern WEAKREF_API zend_class_entry *wr_ce_WeakMap;
 
 #endif /* WR_WEAKMAP_H */
