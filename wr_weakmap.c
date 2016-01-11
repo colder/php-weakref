@@ -54,7 +54,7 @@ static void wr_weakmap_object_free_storage(zend_object *wmap_obj) /* {{{ */
 	ulong handle;
 
 	ZEND_HASH_FOREACH_NUM_KEY(&wmap->map, handle) {
-		wr_store_detach(wmap_obj, handle TSRMLS_CC);
+		wr_store_untrack(wmap_obj, handle TSRMLS_CC);
 	} ZEND_HASH_FOREACH_END();
 
 	zend_object_std_dtor(&wmap->std TSRMLS_CC);
