@@ -15,10 +15,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>colder@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-10-08</date>
+ <date>2016-01-11</date>
  <version>
-  <release>0.2.5</release>
-  <api>0.2.5</api>
+  <release>0.3.0</release>
+  <api>0.3.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -26,7 +26,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
-- Fix crash when freeing circular weakmap/ref (issues #13)
+- Support PHP7 (Big thanks to Julien Pauli for helping with the upgrade) (issue #19)
+- Add support for cloning WeakMap
+- Iterating WeakMap now yields objects as keys (issue #17)
  </notes>
  <contents>
   <dir name="/">
@@ -37,6 +39,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role='src' name='config.w32'/>
    <file role='src' name='php_weakref.c'/>
    <file role='src' name='php_weakref.h'/>
+   <file role='src' name='wr_store.c'/>
+   <file role='src' name='wr_store.h'/>
    <file role='src' name='wr_weakref.c'/>
    <file role='src' name='wr_weakref.h'/>
    <file role='src' name='wr_weakmap.c'/>
@@ -46,9 +50,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <dependencies>
   <required>
    <php>
-    <min>5.3.0</min>
-    <max>5.6.0</max>
-    <exclude>6.0.0</exclude>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0b1</min>
@@ -58,6 +60,16 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>weakref</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <stability><release>beta</release><api>beta</api></stability>
+   <version><release>0.3.0</release><api>0.3.0</api></version>
+   <date>2016-01-11</date>
+   <notes>
+- Support PHP7 (Big thanks to Julien Pauli for helping with the upgrade) (issue #19)
+- Add support for cloning WeakMap
+- Iterating WeakMap now yields objects as keys (issue #17)
+   </notes>
+  </release>
   <release>
    <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.2.5</release><api>0.2.5</api></version>

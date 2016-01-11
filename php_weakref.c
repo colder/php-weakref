@@ -41,12 +41,14 @@ PHP_MINIT_FUNCTION(weakref) /* {{{ */
 	PHP_MINIT(wr_weakref)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MINIT(wr_weakmap)(INIT_FUNC_ARGS_PASSTHRU);
 }
+/* }}} */
 
 PHP_RINIT_FUNCTION(weakref) /* {{{ */
 {
 	wr_store_init(TSRMLS_C);
 	return SUCCESS;
 }
+/* }}} */
 
 PHP_RSHUTDOWN_FUNCTION(weakref) /* {{{ */
 {
