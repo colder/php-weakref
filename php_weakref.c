@@ -26,7 +26,7 @@
 #include "zend_exceptions.h"
 #include "ext/standard/info.h"
 #include "wr_weakref.h"
-//#include "wr_weakmap.h" FIXME
+#include "wr_weakmap.h"
 #include "wr_store.h"
 #include "php_weakref.h"
 
@@ -40,6 +40,7 @@ PHP_MINIT_FUNCTION(weakref) /* {{{ */
 {
 	PHP_MINIT(wr_weakref)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MINIT(wr_weakmap)(INIT_FUNC_ARGS_PASSTHRU);
+	return SUCCESS;
 }
 /* }}} */
 

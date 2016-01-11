@@ -36,6 +36,8 @@ typedef struct _wr_weakmap_refval {
 
 extern WEAKREF_API zend_class_entry *wr_ce_WeakMap;
 
+PHP_MINIT_FUNCTION(wr_weakmap);
+
 #endif /* WR_WEAKMAP_H */
 
 /*
