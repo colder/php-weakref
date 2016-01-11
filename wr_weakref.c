@@ -38,11 +38,6 @@ static inline wr_weakref_object* wr_weakref_fetch(zend_object *obj) {
 
 #define Z_WEAKREF_OBJ_P(zv) wr_weakref_fetch(Z_OBJ_P(zv));
 
-static void wr_weakref_ref_dtor(zend_object *wref_obj, zend_object *ref_obj) { /* {{{ */
-	wr_weakref_object *wref = wr_weakref_fetch(wref_obj);
-	wref->valid = 0;
-}
-/* }}} */
 
 static int wr_weakref_ref_acquire(wr_weakref_object *wref) /* {{{ */
 {
@@ -71,6 +66,22 @@ static int wr_weakref_ref_release(wr_weakref_object *wref) /* {{{ */
 	} else {
 		return FAILURE;
 	}
+}
+/* }}} */
+
+static void wr_weakref_ref_dtor(zend_object *wref_obj, zend_object *ref_obj) { /* {{{ */
+	wr_weakref_object *wref = wr_weakref_fetch(wref_obj);
+
+	/* During shutdown, the ref might be dtored before the wref is released */
+	while (wref->acquired > 0) {
+		if (wr_weakref_ref_release(wref) != SUCCESS) {
+			// shouldn't occur
+			zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly release the reference during shutdown", 0);
+			break;
+		}
+	}
+
+	wref->valid = 0;
 }
 /* }}} */
 
