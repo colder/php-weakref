@@ -26,7 +26,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
-- Fix a bug where acquired ref would be dtored before the wref during shutdown (#69131)
+- Add tests in the release packages
  </notes>
  <contents>
   <dir name="/">
@@ -43,6 +43,24 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role='src' name='wr_weakref.h'/>
    <file role='src' name='wr_weakmap.c'/>
    <file role='src' name='wr_weakmap.h'/>
+   <file role='test' name='tests/weakmap_001.phpt'/>
+   <file role='test' name='tests/weakmap_002.phpt'/>
+   <file role='test' name='tests/weakmap_003.phpt'/>
+   <file role='test' name='tests/weakmap_004.phpt'/>
+   <file role='test' name='tests/weakmap_005.phpt'/>
+   <file role='test' name='tests/weakref_001.phpt'/>
+   <file role='test' name='tests/weakref_002.phpt'/>
+   <file role='test' name='tests/weakref_003.phpt'/>
+   <file role='test' name='tests/weakref_004.phpt'/>
+   <file role='test' name='tests/weakref_005.phpt'/>
+   <file role='test' name='tests/weakref_006.phpt'/>
+   <file role='test' name='tests/weakref_007.phpt'/>
+   <file role='test' name='tests/weakref_008.phpt'/>
+   <file role='test' name='tests/weakref_009.phpt'/>
+   <file role='test' name='tests/weakref_010.phpt'/>
+   <file role='test' name='tests/weakref_011.phpt'/>
+   <file role='test' name='tests/weakref_012.phpt'/>
+   <file role='test' name='tests/weakref_013.phpt'/>
   </dir> <!-- / -->
  </contents>
  <dependencies>
