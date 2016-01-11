@@ -179,7 +179,7 @@ PHP_METHOD(WeakMap, offsetSet)
 		wr_store_track(&wmap->std, wr_weakmap_ref_dtor, Z_OBJ_P(ref_zv) TSRMLS_CC);
 	}
 
-	Z_ADDREF_P(val_zv);
+	Z_TRY_ADDREF_P(val_zv);
 
 	wr_weakmap_refval *refval = emalloc(sizeof(wr_weakmap_refval));
 
