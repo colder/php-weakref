@@ -17,8 +17,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2016-01-11</date>
  <version>
-  <release>0.3.0</release>
-  <api>0.3.0</api>
+  <release>0.3.1</release>
+  <api>0.3.1</api>
  </version>
  <stability>
   <release>beta</release>
@@ -26,9 +26,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
-- Support PHP7 (Big thanks to Julien Pauli for helping with the upgrade) (issue #19)
-- Add support for cloning WeakMap
-- Iterating WeakMap now yields objects as keys (issue #17)
+- Fix a bug where acquired ref would be dtored before the wref during shutdown (#69131)
  </notes>
  <contents>
   <dir name="/">
@@ -60,6 +58,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>weakref</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <stability><release>beta</release><api>beta</api></stability>
+   <version><release>0.3.1</release><api>0.3.1</api></version>
+   <date>2016-01-11</date>
+   <notes>
+- Fix a bug where acquired ref would be dtored before the wref during shutdown (#69131)
+   </notes>
+  </release>
   <release>
    <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.3.0</release><api>0.3.0</api></version>
