@@ -73,9 +73,6 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 			list_entry = next;
 		}
 	}
-
-
-
 }
 /* }}} */
 
