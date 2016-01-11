@@ -28,7 +28,7 @@
 #include "wr_weakref.h"
 #include "php_weakref.h"
 
-void wr_store_init(TSRMLS_D) /* {{{ */
+void wr_store_init() /* {{{ */
 {
 	wr_store *store = emalloc(sizeof(wr_store));
 
@@ -38,7 +38,7 @@ void wr_store_init(TSRMLS_D) /* {{{ */
 	WR_G(store) = store;
 } /* }}} */
 
-void wr_store_destroy(TSRMLS_D) /* {{{ */
+void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
 
@@ -69,7 +69,7 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 
 		while (list_entry != NULL) {
 			wr_ref_list *next = list_entry->next;
-			list_entry->dtor(list_entry->wref_obj, ref_obj TSRMLS_CC);
+			list_entry->dtor(list_entry->wref_obj, ref_obj);
 			efree(list_entry);
 			list_entry = next;
 		}
@@ -82,7 +82,7 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
  * This function is called when a given weak-ref/map starts tracking the 'ref'
  * object.
  */
-void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj TSRMLS_DC) /* {{{ */
+void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj) /* {{{ */
 {
 	wr_store *store        = WR_G(store);
 	ulong     handlers_key = (ulong)ref_obj->handlers;
@@ -110,7 +110,7 @@ void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_ob
  * This function is called when a given weak-ref/map stops tracking the 'ref'
  * object.
  */
-void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC) /* {{{ */
+void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj) /* {{{ */
 {
 	wr_store      *store           = WR_G(store);
 

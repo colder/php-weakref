@@ -38,18 +38,18 @@ static inline wr_weakref_object* wr_weakref_fetch(zend_object *obj) {
 
 #define Z_WEAKREF_OBJ_P(zv) wr_weakref_fetch(Z_OBJ_P(zv));
 
-static void wr_weakref_ref_dtor(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC) { /* {{{ */
+static void wr_weakref_ref_dtor(zend_object *wref_obj, zend_object *ref_obj) { /* {{{ */
 	wr_weakref_object *wref = wr_weakref_fetch(wref_obj);
 	wref->valid = 0;
 }
 /* }}} */
 
-static int wr_weakref_ref_acquire(wr_weakref_object *wref TSRMLS_DC) /* {{{ */
+static int wr_weakref_ref_acquire(wr_weakref_object *wref) /* {{{ */
 {
 	if (wref->valid) {
 		if (wref->acquired == 0) {
 			// From now on we hold a proper reference
-			wref->ref_obj->gc.refcount++;
+			GC_REFCOUNT(wref->ref_obj)++;
 		}
 		wref->acquired++;
 		return SUCCESS;
@@ -59,14 +59,13 @@ static int wr_weakref_ref_acquire(wr_weakref_object *wref TSRMLS_DC) /* {{{ */
 }
 /* }}} */
 
-static int wr_weakref_ref_release(wr_weakref_object *wref TSRMLS_DC) /* {{{ */
+static int wr_weakref_ref_release(wr_weakref_object *wref) /* {{{ */
 {
 	if (wref->valid && (wref->acquired > 0)) {
 		wref->acquired--;
 		if (wref->acquired == 0) {
 			// We no longer need a proper reference
-			wref->ref_obj->gc.refcount--;
-			zend_objects_store_del(wref->ref_obj);
+			OBJ_RELEASE(wref->ref_obj);
 		}
 		return SUCCESS;
 	} else {
@@ -80,29 +79,30 @@ static void wr_weakref_object_free_storage(zend_object *wref_obj) /* {{{ */
 	wr_weakref_object *wref     = wr_weakref_fetch(wref_obj);
 
 	while (wref->acquired > 0) {
-		if (wr_weakref_ref_release(wref TSRMLS_CC) != SUCCESS) {
+		if (wr_weakref_ref_release(wref) != SUCCESS) {
 			// shouldn't occur
-			zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly release the reference on free", 0 TSRMLS_CC);
+			zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly release the reference on free", 0);
 			break;
 		}
 	}
 
 	if (wref->valid) {
-		wr_store_untrack(wref_obj, wref->ref_obj TSRMLS_CC);
+		wr_store_untrack(wref_obj, wref->ref_obj);
 	}
 
-	zend_object_std_dtor(&wref->std TSRMLS_CC);
+	zend_object_std_dtor(&wref->std);
 }
 /* }}} */
 
-static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* {{{ */
+static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce) /* {{{ */
 {
 	wr_weakref_object *wref = ecalloc(1, sizeof(wr_weakref_object) + zend_object_properties_size(ce));
 
-	zend_object_std_init(&wref->std, ce TSRMLS_CC);
+	zend_object_std_init(&wref->std, ce);
+	object_properties_init(&wref->std, ce);
 
 	//if (clone_orig && orig) {
-		//wr_weakref_object *other = (wr_weakref_object *)zend_object_store_get_object(orig TSRMLS_CC);
+		//wr_weakref_object *other = (wr_weakref_object *)zend_object_store_get_object(orig);
 		//if (other->valid) {
 		//	int acquired = 0;
 
@@ -112,15 +112,15 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 		//	intern->ref->value = other->ref->value;
 		//	Z_TYPE_P(intern->ref) = Z_TYPE_P(other->ref);
 
-		//	wr_store_track((zend_object *)intern, wr_weakref_ref_dtor, other->ref TSRMLS_CC);
+		//	wr_store_track((zend_object *)intern, wr_weakref_ref_dtor, other->ref);
 
 		//	for (acquired = 0; acquired < other->acquired; acquired++) {
-		//		wr_weakref_ref_acquire(intern TSRMLS_CC);
+		//		wr_weakref_ref_acquire(intern);
 		//	}
 
 		//	if (intern->acquired != other->acquired) {
 		//		// shouldn't occur
-		//		zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly acquire clone's reference", 0 TSRMLS_CC);
+		//		zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly acquire clone's reference", 0);
 		//	}
 
 		//} else {
@@ -129,9 +129,7 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 		//	intern->acquired = 0;
 		//}
 	//} else {
-		wref->valid    = 0;
-		wref->ref_obj  = NULL;
-		wref->acquired = 0;
+
 	//}
 
 	wref->std.handlers = &wr_handler_WeakRef;
@@ -140,7 +138,7 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 }
 /* }}} */
 
-//static zend_object_value wr_weakref_object_clone(zval *zobject TSRMLS_DC) /* {{{ */
+//static zend_object_value wr_weakref_object_clone(zval *zobject) /* {{{ */
 //{
 //	zend_object_value      new_obj_val;
 //	zend_object           *old_object;
@@ -148,19 +146,19 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 //	uint32_t               handle = Z_OBJ_HANDLE_P(zobject);
 //	wr_weakref_object     *intern;
 //
-//	old_object  = zend_objects_get_address(zobject TSRMLS_CC);
-//	new_obj_val = wr_weakref_object_new_ex(old_object->ce, &intern, zobject, 1 TSRMLS_CC);
+//	old_object  = zend_objects_get_address(zobject);
+//	new_obj_val = wr_weakref_object_new_ex(old_object->ce, &intern, zobject, 1);
 //	new_object  = &intern->std;
 //
-//	zend_objects_clone_members(new_object, new_obj_val, old_object, handle TSRMLS_CC);
+//	zend_objects_clone_members(new_object, new_obj_val, old_object, handle);
 //
 //	return new_obj_val;
 //}
 ///* }}} */
 
-static zend_object* wr_weakref_object_new(zend_class_entry *ce TSRMLS_DC) /* {{{ */
+static zend_object* wr_weakref_object_new(zend_class_entry *ce) /* {{{ */
 {
-	return wr_weakref_object_new_ex(ce TSRMLS_CC);
+	return wr_weakref_object_new_ex(ce);
 }
 /* }}} */
 
@@ -194,7 +192,7 @@ PHP_METHOD(WeakRef, acquire)
 		return;
 	}
 
-	if (wr_weakref_ref_acquire(wref TSRMLS_CC) == SUCCESS) {
+	if (wr_weakref_ref_acquire(wref) == SUCCESS) {
 		RETURN_TRUE;
 	} else {
 		RETURN_FALSE;
@@ -212,7 +210,7 @@ PHP_METHOD(WeakRef, release)
 		return;
 	}
 
-	if (wr_weakref_ref_release(wref TSRMLS_CC) == SUCCESS) {
+	if (wr_weakref_ref_release(wref) == SUCCESS) {
 		RETURN_TRUE;
 	} else {
 		RETURN_FALSE;
@@ -242,13 +240,13 @@ PHP_METHOD(WeakRef, __construct)
 	zend_object *wref_obj   = Z_OBJ_P(getThis());
 	wr_weakref_object *wref = wr_weakref_fetch(wref_obj);
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "o", &ref)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS(), "o", &ref)) {
 		return;
 	}
 
 	wref->ref_obj = Z_OBJ_P(ref);
 
-	wr_store_track(wref_obj, wr_weakref_ref_dtor, Z_OBJ_P(ref) TSRMLS_CC);
+	wr_store_track(wref_obj, wr_weakref_ref_dtor, Z_OBJ_P(ref));
 
 	wref->valid = 1;
 }
@@ -268,7 +266,7 @@ static const zend_function_entry wr_funcs_WeakRef[] = {
 	PHP_ME(WeakRef, get,             arginfo_wr_weakref_void,            ZEND_ACC_PUBLIC)
 	PHP_ME(WeakRef, acquire,         arginfo_wr_weakref_void,            ZEND_ACC_PUBLIC)
 	PHP_ME(WeakRef, release,         arginfo_wr_weakref_void,            ZEND_ACC_PUBLIC)
-	{NULL, NULL, NULL}
+	PHP_FE_END
 };
 /* }}} */
 
@@ -278,7 +276,7 @@ PHP_MINIT_FUNCTION(wr_weakref) /* {{{ */
 
 	INIT_CLASS_ENTRY(weakref_ce, "WeakRef", wr_funcs_WeakRef);
 
-	wr_ce_WeakRef = zend_register_internal_class(&weakref_ce TSRMLS_CC);
+	wr_ce_WeakRef = zend_register_internal_class(&weakref_ce);
 
 	wr_ce_WeakRef->ce_flags      |= ZEND_ACC_FINAL;
 	wr_ce_WeakRef->create_object  = wr_weakref_object_new;

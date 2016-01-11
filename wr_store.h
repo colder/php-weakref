@@ -29,7 +29,7 @@
 
 #include "wr_weakref.h"
 
-typedef void (*wr_ref_dtor)(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC);
+typedef void (*wr_ref_dtor)(zend_object *wref_obj, zend_object *ref_obj);
 
 typedef struct _wr_ref_list {
 	zend_object         *wref_obj;
@@ -50,8 +50,8 @@ typedef struct _wr_store {
 void wr_store_init(TSRMLS_D);
 void wr_store_destroy(TSRMLS_D);
 void wr_store_tracked_object_dtor(zend_object *ref_obj);
-void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj TSRMLS_DC);
-void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj TSRMLS_DC);
+void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj);
+void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj);
 
 #endif /* PHP_WEAKREF_H */
 
