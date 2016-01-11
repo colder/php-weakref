@@ -94,13 +94,24 @@ static void wr_weakref_object_free_storage(zend_object *wref_obj) /* {{{ */
 }
 /* }}} */
 
-static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce) /* {{{ */
+static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce, zend_object *cloneOf) /* {{{ */
 {
 	wr_weakref_object *wref = ecalloc(1, sizeof(wr_weakref_object) + zend_object_properties_size(ce));
 
 	zend_object_std_init(&wref->std, ce);
 	object_properties_init(&wref->std, ce);
 
+	if (cloneOf) {
+		wr_weakref_object *other = wr_weakref_fetch(cloneOf);
+		wref->valid   = other->valid;
+		wref->ref_obj = other->ref_obj;
+
+		wr_store_track(&wref->std, wr_weakref_ref_dtor, other->ref_obj);
+
+		while(wref->acquired < other->acquired && (wr_weakref_ref_acquire(wref) == SUCCESS)) {
+			// NOOP
+		}
+	}
 	//if (clone_orig && orig) {
 		//wr_weakref_object *other = (wr_weakref_object *)zend_object_store_get_object(orig);
 		//if (other->valid) {
@@ -138,27 +149,20 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce) /* {{{ */
 }
 /* }}} */
 
-//static zend_object_value wr_weakref_object_clone(zval *zobject) /* {{{ */
-//{
-//	zend_object_value      new_obj_val;
-//	zend_object           *old_object;
-//	zend_object           *new_object;
-//	uint32_t               handle = Z_OBJ_HANDLE_P(zobject);
-//	wr_weakref_object     *intern;
-//
-//	old_object  = zend_objects_get_address(zobject);
-//	new_obj_val = wr_weakref_object_new_ex(old_object->ce, &intern, zobject, 1);
-//	new_object  = &intern->std;
-//
-//	zend_objects_clone_members(new_object, new_obj_val, old_object, handle);
-//
-//	return new_obj_val;
-//}
-///* }}} */
+static zend_object* wr_weakref_object_clone(zval *cloneOf_zv) /* {{{ */
+{
+	zend_object *cloneOf = Z_OBJ_P(cloneOf_zv);
+	zend_object *clone = wr_weakref_object_new_ex(cloneOf->ce, cloneOf);
+
+	zend_objects_clone_members(clone, Z_OBJ_P(cloneOf_zv));
+
+	return clone;
+}
+/* }}} */
 
 static zend_object* wr_weakref_object_new(zend_class_entry *ce) /* {{{ */
 {
-	return wr_weakref_object_new_ex(ce);
+	return wr_weakref_object_new_ex(ce, NULL);
 }
 /* }}} */
 
@@ -283,7 +287,7 @@ PHP_MINIT_FUNCTION(wr_weakref) /* {{{ */
 
 	memcpy(&wr_handler_WeakRef, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 
-	//wr_handler_WeakRef.clone_obj = wr_weakref_object_clone; // FIXME
+	wr_handler_WeakRef.clone_obj = wr_weakref_object_clone;
 	wr_handler_WeakRef.free_obj  = wr_weakref_object_free_storage;
 	wr_handler_WeakRef.offset    = XtOffsetOf(wr_weakref_object, std);
 
