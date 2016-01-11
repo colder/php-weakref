@@ -69,3 +69,22 @@ echo "Done\n";
 var_dump(count($wm)); // int(0)
 ?>
 ```
+
+As of PHP7, iterating WeakMap provides access to both the key (the reference)
+and the value:
+
+```php
+<?php
+$wm = new WeakMap();
+
+$wmk = new StdClass;
+$wmv = new StdClass;
+
+$wm[$wmk] = $wmv;
+
+foreach($wm as $k => $v) {
+    // $k == $wmk
+    // $v == $wmv
+}
+?>
+```

@@ -27,19 +27,24 @@ foreach($wm as $k => $v) {
 ?>
 ==END==
 --EXPECTF--
-int(1)
+object(stdClass)#1 (0) {
+}
 object(stdClass)#2 (0) {
 }
-int(3)
+object(stdClass)#3 (0) {
+}
 object(stdClass)#2 (0) {
 }
-int(4)
+object(stdClass)#4 (0) {
+}
 object(stdClass)#2 (0) {
 }
-int(3)
+object(stdClass)#3 (0) {
+}
 object(stdClass)#2 (0) {
 }
-int(4)
+object(stdClass)#4 (0) {
+}
 object(stdClass)#2 (0) {
 }
 ==END==
