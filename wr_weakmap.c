@@ -61,8 +61,7 @@ static void wr_weakmap_object_free_storage(zend_object *wmap_obj) /* {{{ */
 	zend_hash_destroy(&wmap->map);
 
 	zend_object_std_dtor(&wmap->std TSRMLS_CC);
-}
-/* }}} */
+} /* }}} */
 
 static void wr_weakmap_refval_dtor(zval *data) /* {{{ */
 {
@@ -70,7 +69,7 @@ static void wr_weakmap_refval_dtor(zval *data) /* {{{ */
 	zval_ptr_dtor(refval->val);
 
 	efree(refval);
-}
+} /* }}} */
 
 static zend_object* wr_weakmap_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* {{{ */
 {
@@ -83,8 +82,7 @@ static zend_object* wr_weakmap_object_new_ex(zend_class_entry *ce TSRMLS_DC) /* 
 	wmap->std.handlers = &wr_handler_WeakMap;
 
 	return &wmap->std;
-}
-/* }}} */
+} /* }}} */
 
 //static zend_object_value wr_weakmap_object_clone(zval *zobject TSRMLS_DC) /* {{{ */
 //{
@@ -117,8 +115,7 @@ PHP_METHOD(WeakMap, __construct)
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto int WeakMap::count(void)
 */
@@ -131,8 +128,7 @@ PHP_METHOD(WeakMap, count)
 	}
 
 	RETURN_LONG(zend_hash_num_elements(&wmap->map));
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto bool WeakMap::offsetExists(object $index) U
  Returns whether the requested $index exists. */
