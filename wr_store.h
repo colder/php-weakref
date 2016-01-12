@@ -44,7 +44,8 @@ typedef struct _wr_store_data {
 
 typedef struct _wr_store {
 	HashTable objs;
-	HashTable old_dtors;
+	HashTable old_handlers;
+	uint	  hash_replaced;
 } wr_store;
 
 void wr_store_init(TSRMLS_D);

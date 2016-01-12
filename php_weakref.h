@@ -51,6 +51,8 @@ ZEND_BEGIN_MODULE_GLOBALS(weakref)
     wr_store *store;
 ZEND_END_MODULE_GLOBALS(weakref)
 
+PHP_FUNCTION(weakref_object_hash);
+
 #ifdef ZTS
 #define WR_G(v) TSRMG(weakref_globals_id, zend_weakref_globals *, v)
 extern int weakref_globals_id;

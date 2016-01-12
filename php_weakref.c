@@ -29,6 +29,7 @@
 #include "wr_weakmap.h"
 #include "wr_store.h"
 #include "php_weakref.h"
+#include "ext/spl/php_spl.h"
 
 #ifdef ZTS
 int weakref_globals_id;
@@ -58,6 +59,28 @@ PHP_RSHUTDOWN_FUNCTION(weakref) /* {{{ */
 }
 /* }}} */
 
+PHP_FUNCTION(weakref_object_hash)
+{
+    zval *obj;
+	wr_store *store = WR_G(store);
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "o", &obj) == FAILURE) {
+		return;
+	}
+
+	const zend_object_handlers *new_handlers = Z_OBJ_P(obj)->handlers;
+	zend_object_handlers *old_handlers = zend_hash_index_find_ptr(&store->old_handlers, (ulong)new_handlers);
+	if (old_handlers) {
+		Z_OBJ_P(obj)->handlers = old_handlers;
+		zend_string *ret = php_spl_object_hash(obj);
+		Z_OBJ_P(obj)->handlers = new_handlers;
+		RETURN_NEW_STR(ret);
+	} else {
+		RETURN_NEW_STR(php_spl_object_hash(obj));
+	}
+}
+/* }}} */
+
 static PHP_GINIT_FUNCTION(weakref) /* {{{ */
 {
 	weakref_globals->store = NULL;
@@ -73,11 +96,21 @@ PHP_MINFO_FUNCTION(weakref) /* {{{ */
 }
 /* }}} */
 
+ZEND_BEGIN_ARG_INFO(arginfo_wr_weakref_object_hash, 0)
+	ZEND_ARG_INFO(0, object)
+ZEND_END_ARG_INFO()
+
+static const zend_function_entry weakref_functions[] = {
+	PHP_FE(weakref_object_hash,      arginfo_wr_weakref_object_hash)
+	PHP_FE_END
+};
+/* }}} */
+
 zend_module_entry weakref_module_entry = { /* {{{ */
 	STANDARD_MODULE_HEADER_EX, NULL,
 	NULL,
 	"Weakref",
-	NULL,
+	weakref_functions,
 	PHP_MINIT(weakref),
 	NULL,
 	PHP_RINIT(weakref),

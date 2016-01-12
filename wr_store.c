@@ -27,36 +27,41 @@
 #include "ext/standard/info.h"
 #include "wr_weakref.h"
 #include "php_weakref.h"
+#include "ext/spl/php_spl.h"
 
 void wr_store_init() /* {{{ */
 {
 	wr_store *store = emalloc(sizeof(wr_store));
 
-	zend_hash_init(&store->old_dtors, 0, NULL, NULL, 0);
+	zend_hash_init(&store->old_handlers, 0, NULL, NULL, 0);
 	zend_hash_init(&store->objs, 0, NULL, NULL, 0);
 
 	WR_G(store) = store;
+
 } /* }}} */
+
 
 void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
 
-	zend_hash_destroy(&store->old_dtors);
+	zend_hash_destroy(&store->old_handlers);
 	zend_hash_destroy(&store->objs);
 
 	efree(store);
 
 	WR_G(store) = NULL;
+
 } /* }}} */
 
 /* This function is invoked whenever an object tracked by a weak ref/map is
  * destroyed */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
-	wr_store                  *store      = WR_G(store);
+	wr_store                  *store    = WR_G(store);
 
-	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
+	zend_object_handlers      *handlers = zend_hash_index_find_ptr(&store->old_handlers, (ulong)ref_obj->handlers);
+	zend_object_dtor_obj_t     orig_dtor  = handlers->dtor_obj;
 
 	/* Original dtor has been called, we invalidate the necessary weakrefs: */
 	orig_dtor(ref_obj);
@@ -73,6 +78,12 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 			list_entry = next;
 		}
 	}
+
+	zend_object_handlers *old_handlers;
+	if ((old_handlers = zend_hash_index_find_ptr(&store->old_handlers, (ulong)ref_obj->handlers)) != NULL) {
+		efree((zend_object_handlers *)ref_obj->handlers);
+		ref_obj->handlers = old_handlers;
+	}
 }
 /* }}} */
 
@@ -86,9 +97,26 @@ void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_ob
 	ulong     handlers_key = (ulong)ref_obj->handlers;
 	ulong     handle_key   = (ulong)ref_obj->handle;
 
-	if (zend_hash_index_find_ptr(&store->old_dtors, handlers_key) == NULL) {
-		zend_hash_index_update_ptr(&store->old_dtors, handlers_key, ref_obj->handlers->dtor_obj);
-		((zend_object_handlers *)ref_obj->handlers)->dtor_obj = wr_store_tracked_object_dtor;
+	if (!store->hash_replaced) {
+		store->hash_replaced = 1;
+		EG(function_table)->pDestructor = NULL;
+		zend_function *weakref_object_hash = zend_hash_str_find_ptr(EG(function_table), "weakref_object_hash", sizeof("weakref_object_hash")-1);
+		zend_function *spl_object_hash     = zend_hash_str_find_ptr(EG(function_table), "spl_object_hash",     sizeof("spl_object_hash")-1);
+
+		zend_hash_str_update_ptr(EG(function_table), "spl_object_hash", sizeof("spl_object_hash")-1, weakref_object_hash);
+		zend_hash_str_update_ptr(EG(function_table), "weakref_object_hash", sizeof("weakref_object_hash")-1, spl_object_hash);
+		EG(function_table)->pDestructor = ZEND_FUNCTION_DTOR;
+	}
+
+	if (zend_hash_index_find_ptr(&store->old_handlers, handlers_key) == NULL) {
+		const zend_object_handlers *old_handlers = ref_obj->handlers;
+
+		zend_object_handlers *new_handlers = emalloc(sizeof(zend_object_handlers));
+		memcpy(new_handlers, old_handlers, sizeof(zend_object_handlers));
+		new_handlers->dtor_obj = wr_store_tracked_object_dtor;
+		ref_obj->handlers = new_handlers;
+
+		zend_hash_index_update_ptr(&store->old_handlers, (ulong)new_handlers, (void *)old_handlers);
 	}
 
 	wr_ref_list *tail = zend_hash_index_find_ptr(&store->objs, handle_key);
