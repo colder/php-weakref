@@ -2,9 +2,11 @@ configure
 config.log
 config.guess
 run-tests.php
+tmp-php.ini
 config.h
 config.sub
 ltmain.sh
+ltmain.sh.backup
 Makefile.fragments
 Makefile.objects
 modules
