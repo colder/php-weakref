@@ -41,6 +41,13 @@ Weakref: Destroying the weakref and its object after a fatal error
 	}
 ?>
 --EXPECTF--
+Destroy A
+Destroy B
+bool(false)
 
-Fatal error: Call to undefined function crash() in %s on line %d
+Fatal error: Uncaught Error: Call to undefined function crash() in %s:%d
+Stack trace:
+#0 %s(%d): doit()
+#1 {main}
+  thrown in %s on line %d
 Exit: 255
