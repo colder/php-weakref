@@ -135,8 +135,12 @@ void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj) /* {{{ */
 
 		if (prev) {
 			prev->next = cur->next;
-		} else {
+		} else if (cur->next) {
 			zend_hash_index_update_ptr(&store->objs, ref_obj->handle, cur->next);
+		} else {
+			zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
+			((zend_object_handlers *)ref_obj->handlers)->dtor_obj = orig_dtor;
+			zend_hash_index_del(&store->objs, (ulong)ref_obj->handle);
 		}
 
 		efree(cur);
