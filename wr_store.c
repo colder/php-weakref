@@ -55,23 +55,23 @@ void wr_store_destroy() /* {{{ */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
-
 	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
+	ulong                      handle_key = ref_obj->handle;
+	wr_ref_list               *list_entry;
 
 	/* Original dtor has been called, we invalidate the necessary weakrefs: */
 	orig_dtor(ref_obj);
 
-	wr_ref_list *list_entry;
-	if ((list_entry = zend_hash_index_find_ptr(&store->objs, ref_obj->handle)) != NULL) {
+	if ((list_entry = zend_hash_index_find_ptr(&store->objs, handle_key)) != NULL) {
 		/* Invalidate wrefs_head while dtoring, to prevent detach on same wr */
-		zend_hash_index_del(&store->objs, ref_obj->handle);
+		zend_hash_index_del(&store->objs, handle_key);
 
-		while (list_entry != NULL) {
+		do {
 			wr_ref_list *next = list_entry->next;
 			list_entry->dtor(list_entry->wref_obj, ref_obj);
 			efree(list_entry);
 			list_entry = next;
-		}
+		} while (list_entry);
 	}
 }
 /* }}} */
@@ -84,7 +84,7 @@ void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_ob
 {
 	wr_store *store        = WR_G(store);
 	ulong     handlers_key = (ulong)ref_obj->handlers;
-	ulong     handle_key   = (ulong)ref_obj->handle;
+	ulong     handle_key   = ref_obj->handle;
 
 	if (zend_hash_index_find_ptr(&store->old_dtors, handlers_key) == NULL) {
 		zend_hash_index_update_ptr(&store->old_dtors, handlers_key, ref_obj->handlers->dtor_obj);
@@ -135,8 +135,10 @@ void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj) /* {{{ */
 
 		if (prev) {
 			prev->next = cur->next;
-		} else {
+		} else if (cur->next) {
 			zend_hash_index_update_ptr(&store->objs, ref_obj->handle, cur->next);
+		} else {
+			zend_hash_index_del(&store->objs, ref_obj->handle);
 		}
 
 		efree(cur);
