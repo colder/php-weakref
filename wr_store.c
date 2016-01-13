@@ -57,16 +57,16 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 	wr_store                  *store      = WR_G(store);
 
 	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
+	wr_ref_list               *list_entry = zend_hash_index_find_ptr(&store->objs, ref_obj->handle);
 
 	/* Original dtor has been called, we invalidate the necessary weakrefs: */
 	orig_dtor(ref_obj);
 
-	wr_ref_list *list_entry;
-	if ((list_entry = zend_hash_index_find_ptr(&store->objs, ref_obj->handle)) != NULL) {
+	if (list_entry) {
 		/* Invalidate wrefs_head while dtoring, to prevent detach on same wr */
 		zend_hash_index_del(&store->objs, ref_obj->handle);
 
-		while (list_entry != NULL) {
+		while (list_entry) {
 			wr_ref_list *next = list_entry->next;
 			list_entry->dtor(list_entry->wref_obj, ref_obj);
 			efree(list_entry);
@@ -138,8 +138,6 @@ void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj) /* {{{ */
 		} else if (cur->next) {
 			zend_hash_index_update_ptr(&store->objs, ref_obj->handle, cur->next);
 		} else {
-			zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
-			((zend_object_handlers *)ref_obj->handlers)->dtor_obj = orig_dtor;
 			zend_hash_index_del(&store->objs, (ulong)ref_obj->handle);
 		}
 
