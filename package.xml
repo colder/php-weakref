@@ -15,9 +15,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>colder@php.net</email>
   <active>yes</active>
  </lead>
- <date>2016-01-11</date>
+ <date>2016-01-24</date>
  <version>
-  <release>0.3.1</release>
+  <release>0.3.2</release>
   <api>0.3.1</api>
  </version>
  <stability>
@@ -26,7 +26,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>
-- Add tests in the release packages
+- Fix crash in wr_store_tracked_object_dtor
  </notes>
  <contents>
   <dir name="/">
@@ -61,6 +61,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role='test' name='tests/weakref_011.phpt'/>
    <file role='test' name='tests/weakref_012.phpt'/>
    <file role='test' name='tests/weakref_013.phpt'/>
+   <file role='test' name='tests/weakref_014.phpt'/>
   </dir> <!-- / -->
  </contents>
  <dependencies>
@@ -76,6 +77,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>weakref</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <stability><release>beta</release><api>beta</api></stability>
+   <version><release>0.3.2</release><api>0.3.1</api></version>
+   <date>2016-01-24</date>
+   <notes>
+- Fix crash in wr_store_tracked_object_dtor
+   </notes>
+  </release>
   <release>
    <stability><release>beta</release><api>beta</api></stability>
    <version><release>0.3.1</release><api>0.3.1</api></version>
