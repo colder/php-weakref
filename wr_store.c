@@ -55,6 +55,7 @@ void wr_store_destroy() /* {{{ */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
+	if (!store) return;
 	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
 	ulong                      handle_key = ref_obj->handle;
 	wr_ref_list               *list_entry;
