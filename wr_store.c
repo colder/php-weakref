@@ -13,6 +13,7 @@
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
    | Authors: Etienne Kneuss <colder@php.net>                             |
+   | Fix for PHP7+Apache2: CommerceByte Consulting <jim@commercebyte.com> |
    +----------------------------------------------------------------------+
  */
 
@@ -38,9 +39,24 @@ void wr_store_init() /* {{{ */
 	WR_G(store) = store;
 } /* }}} */
 
+/* See comment in wr_store_destroy */
+int wr_store_dtor_restore(zend_object_dtor_obj_t *val,int arg_num, va_list arg_list, zend_hash_key *key)
+{
+
+	((zend_object_handlers *) key->h)->dtor_obj = *val;
+	return ZEND_HASH_APPLY_REMOVE;
+}
+
 void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
+	
+	/*
+	jim@commercebyte.com -
+	Explicitly restore the dtor handlers
+	Not doing so causes a disaster in PHP7 + Apache2 lib environment
+	*/
+	zend_hash_apply_with_arguments(&store->old_dtors, wr_store_dtor_restore, 0);
 
 	zend_hash_destroy(&store->old_dtors);
 	zend_hash_destroy(&store->objs);
@@ -50,12 +66,19 @@ void wr_store_destroy() /* {{{ */
 	WR_G(store) = NULL;
 } /* }}} */
 
+
+
 /* This function is invoked whenever an object tracked by a weak ref/map is
  * destroyed */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
-	if (!store) return;
+	
+	if (!store) {
+	    /* Sanity check, should never get here as long as wr_store_dtor_restore() is engaged */
+	    return;
+	}
+	
 	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
 	ulong                      handle_key = ref_obj->handle;
 	wr_ref_list               *list_entry;
