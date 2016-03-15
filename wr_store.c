@@ -42,7 +42,7 @@ void wr_store_init() /* {{{ */
 /* See comment in wr_store_destroy */
 int wr_store_dtor_restore(zval *val,int arg_num, va_list arg_list, zend_hash_key *key)
 {
-	zend_object_dtor_obj_t *dtor = (zend_object_dtor_obj_t*) Z_PTR_P(val);
+	zend_object_dtor_obj_t *dtor = (zend_object_dtor_obj_t*) val;
 
 	((zend_object_handlers *) key->h)->dtor_obj = *dtor;
 	return ZEND_HASH_APPLY_REMOVE;
