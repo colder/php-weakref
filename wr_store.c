@@ -41,6 +41,12 @@ void wr_store_init() /* {{{ */
 void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
+	zend_object_dtor_obj_t     orig_dtor;
+	ulong key;
+
+	ZEND_HASH_FOREACH_NUM_KEY_PTR(&store->old_dtors, key, orig_dtor) {
+		((zend_object_handlers *)key)->dtor_obj = orig_dtor;
+	} ZEND_HASH_FOREACH_END();
 
 	zend_hash_destroy(&store->old_dtors);
 	zend_hash_destroy(&store->objs);
