@@ -38,13 +38,16 @@ static inline wr_weakref_object* wr_weakref_fetch(zend_object *obj) {
 
 #define Z_WEAKREF_OBJ_P(zv) wr_weakref_fetch(Z_OBJ_P(zv));
 
+#if PHP_VERSION_ID < 70300
+#define GC_ADDREF(p) ++GC_REFCOUNT(p)
+#endif
 
 static int wr_weakref_ref_acquire(wr_weakref_object *wref) /* {{{ */
 {
 	if (wref->valid) {
 		if (wref->acquired == 0) {
 			// From now on we hold a proper reference
-			GC_REFCOUNT(wref->ref_obj)++;
+            GC_ADDREF(wref->ref_obj);
 		}
 		wref->acquired++;
 		return SUCCESS;

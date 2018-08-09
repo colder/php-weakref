@@ -37,14 +37,9 @@ typedef struct _wr_ref_list {
 	struct _wr_ref_list *next;
 } wr_ref_list;
 
-typedef struct _wr_store_data {
-	zend_object_dtor_obj_t  orig_dtor;
-	wr_ref_list            *wrefs_head;
-} wr_store_data;
-
 typedef struct _wr_store {
 	HashTable objs;
-	HashTable old_dtors;
+	HashTable old_handlers;
 } wr_store;
 
 void wr_store_init(TSRMLS_D);
