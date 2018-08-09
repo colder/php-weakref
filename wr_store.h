@@ -47,7 +47,7 @@ void wr_store_destroy(TSRMLS_D);
 void wr_store_tracked_object_dtor(zend_object *ref_obj);
 void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj);
 void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj);
-void wr_store_restore_handlers(zend_object *object, zend_object_handlers* orig_handlers)
+void wr_store_restore_handlers(zend_object *object, zend_object_handlers* orig_handlers);
 
 #endif /* PHP_WEAKREF_H */
 
