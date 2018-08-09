@@ -40,18 +40,18 @@ void wr_store_init() /* {{{ */
 
 
 void wr_store_restore_handlers(zend_object *object, zend_object_handlers* handlers) {
-    efree((zend_object_handlers*)object->handlers);
-    object->handlers = handlers;
+	efree((zend_object_handlers*)object->handlers);
+	object->handlers = handlers;
 }
 
 void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
-    zend_object_handlers* orig_handlers;
+	zend_object_handlers* orig_handlers;
 	ulong key;
 
 	ZEND_HASH_FOREACH_NUM_KEY_PTR(&store->old_handlers, key, orig_handlers) {
-        wr_store_restore_handlers((zend_object *)key, orig_handlers);
+		wr_store_restore_handlers((zend_object *)key, orig_handlers);
 	} ZEND_HASH_FOREACH_END();
 
 	zend_hash_destroy(&store->old_handlers);
@@ -67,15 +67,15 @@ void wr_store_destroy() /* {{{ */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
-	ulong handlers_key = (ulong)ref_obj;
-    zend_object_handlers   *orig_handlers = zend_hash_index_find_ptr(&store->old_handlers, handlers_key);
+	ulong                    handlers_key = (ulong)ref_obj;
+	zend_object_handlers   *orig_handlers = zend_hash_index_find_ptr(&store->old_handlers, handlers_key);
 	ulong                      handle_key = ref_obj->handle;
 	wr_ref_list               *list_entry;
 
 	/* Original dtor has been called, we invalidate the necessary weakrefs: */
-    orig_handlers->dtor_obj(ref_obj);
+	orig_handlers->dtor_obj(ref_obj);
 
-    wr_store_restore_handlers((zend_object *)handlers_key, orig_handlers);
+	wr_store_restore_handlers((zend_object *)handlers_key, orig_handlers);
 	zend_hash_index_del(&store->old_handlers, handlers_key);
 
 	if ((list_entry = zend_hash_index_find_ptr(&store->objs, handle_key)) != NULL) {
