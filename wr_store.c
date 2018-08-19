@@ -32,23 +32,29 @@ void wr_store_init() /* {{{ */
 {
 	wr_store *store = emalloc(sizeof(wr_store));
 
-	zend_hash_init(&store->old_dtors, 0, NULL, NULL, 0);
+	zend_hash_init(&store->old_handlers, 0, NULL, NULL, 0);
 	zend_hash_init(&store->objs, 0, NULL, NULL, 0);
 
 	WR_G(store) = store;
 } /* }}} */
 
+
+void wr_store_restore_handlers(zend_object *object, zend_object_handlers* handlers) {
+	efree((zend_object_handlers*)object->handlers);
+	object->handlers = handlers;
+}
+
 void wr_store_destroy() /* {{{ */
 {
 	wr_store *store = WR_G(store);
-	zend_object_dtor_obj_t     orig_dtor;
+	zend_object_handlers* orig_handlers;
 	ulong key;
 
-	ZEND_HASH_FOREACH_NUM_KEY_PTR(&store->old_dtors, key, orig_dtor) {
-		((zend_object_handlers *)key)->dtor_obj = orig_dtor;
+	ZEND_HASH_FOREACH_NUM_KEY_PTR(&store->old_handlers, key, orig_handlers) {
+		wr_store_restore_handlers((zend_object *)key, orig_handlers);
 	} ZEND_HASH_FOREACH_END();
 
-	zend_hash_destroy(&store->old_dtors);
+	zend_hash_destroy(&store->old_handlers);
 	zend_hash_destroy(&store->objs);
 
 	efree(store);
@@ -61,12 +67,16 @@ void wr_store_destroy() /* {{{ */
 void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 {
 	wr_store                  *store      = WR_G(store);
-	zend_object_dtor_obj_t     orig_dtor  = zend_hash_index_find_ptr(&store->old_dtors, (ulong)ref_obj->handlers);
+	ulong                    handlers_key = (ulong)ref_obj;
+	zend_object_handlers   *orig_handlers = zend_hash_index_find_ptr(&store->old_handlers, handlers_key);
 	ulong                      handle_key = ref_obj->handle;
 	wr_ref_list               *list_entry;
 
 	/* Original dtor has been called, we invalidate the necessary weakrefs: */
-	orig_dtor(ref_obj);
+	orig_handlers->dtor_obj(ref_obj);
+
+	wr_store_restore_handlers((zend_object *)handlers_key, orig_handlers);
+	zend_hash_index_del(&store->old_handlers, handlers_key);
 
 	if ((list_entry = zend_hash_index_find_ptr(&store->objs, handle_key)) != NULL) {
 		/* Invalidate wrefs_head while dtoring, to prevent detach on same wr */
@@ -89,12 +99,16 @@ void wr_store_tracked_object_dtor(zend_object *ref_obj) /* {{{ */
 void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj) /* {{{ */
 {
 	wr_store *store        = WR_G(store);
-	ulong     handlers_key = (ulong)ref_obj->handlers;
+	ulong     handlers_key = (ulong)ref_obj;
 	ulong     handle_key   = ref_obj->handle;
 
-	if (zend_hash_index_find_ptr(&store->old_dtors, handlers_key) == NULL) {
-		zend_hash_index_update_ptr(&store->old_dtors, handlers_key, ref_obj->handlers->dtor_obj);
-		((zend_object_handlers *)ref_obj->handlers)->dtor_obj = wr_store_tracked_object_dtor;
+	if (zend_hash_index_find_ptr(&store->old_handlers, handlers_key) == NULL) {
+		size_t size = sizeof(zend_object_handlers);
+		zend_hash_index_update_ptr(&store->old_handlers, handlers_key, ref_obj->handlers);
+		zend_object_handlers* handlers = emalloc(size);
+		memcpy(handlers, ref_obj->handlers, size);
+		handlers->dtor_obj = wr_store_tracked_object_dtor;
+		ref_obj->handlers = handlers;
 	}
 
 	wr_ref_list *tail = zend_hash_index_find_ptr(&store->objs, handle_key);

@@ -37,14 +37,9 @@ typedef struct _wr_ref_list {
 	struct _wr_ref_list *next;
 } wr_ref_list;
 
-typedef struct _wr_store_data {
-	zend_object_dtor_obj_t  orig_dtor;
-	wr_ref_list            *wrefs_head;
-} wr_store_data;
-
 typedef struct _wr_store {
 	HashTable objs;
-	HashTable old_dtors;
+	HashTable old_handlers;
 } wr_store;
 
 void wr_store_init(TSRMLS_D);
@@ -52,6 +47,7 @@ void wr_store_destroy(TSRMLS_D);
 void wr_store_tracked_object_dtor(zend_object *ref_obj);
 void wr_store_track(zend_object *wref_obj, wr_ref_dtor dtor, zend_object *ref_obj);
 void wr_store_untrack(zend_object *wref_obj, zend_object *ref_obj);
+void wr_store_restore_handlers(zend_object *object, zend_object_handlers* orig_handlers);
 
 #endif /* PHP_WEAKREF_H */
 

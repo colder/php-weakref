@@ -38,13 +38,16 @@ static inline wr_weakref_object* wr_weakref_fetch(zend_object *obj) {
 
 #define Z_WEAKREF_OBJ_P(zv) wr_weakref_fetch(Z_OBJ_P(zv));
 
+#if PHP_VERSION_ID < 70300
+#define GC_ADDREF(p) ++GC_REFCOUNT(p)
+#endif
 
 static int wr_weakref_ref_acquire(wr_weakref_object *wref) /* {{{ */
 {
 	if (wref->valid) {
 		if (wref->acquired == 0) {
 			// From now on we hold a proper reference
-			GC_REFCOUNT(wref->ref_obj)++;
+			GC_ADDREF(wref->ref_obj);
 		}
 		wref->acquired++;
 		return SUCCESS;
@@ -123,36 +126,6 @@ static zend_object* wr_weakref_object_new_ex(zend_class_entry *ce, zend_object *
 			// NOOP
 		}
 	}
-	//if (clone_orig && orig) {
-		//wr_weakref_object *other = (wr_weakref_object *)zend_object_store_get_object(orig);
-		//if (other->valid) {
-		//	int acquired = 0;
-
-		//	intern->valid = other->valid;
-		//	ALLOC_INIT_ZVAL(intern->ref);
-		//	// ZVAL_COPY_VALUE
-		//	intern->ref->value = other->ref->value;
-		//	Z_TYPE_P(intern->ref) = Z_TYPE_P(other->ref);
-
-		//	wr_store_track((zend_object *)intern, wr_weakref_ref_dtor, other->ref);
-
-		//	for (acquired = 0; acquired < other->acquired; acquired++) {
-		//		wr_weakref_ref_acquire(intern);
-		//	}
-
-		//	if (intern->acquired != other->acquired) {
-		//		// shouldn't occur
-		//		zend_throw_exception(spl_ce_RuntimeException, "Failed to correctly acquire clone's reference", 0);
-		//	}
-
-		//} else {
-		//	intern->valid    = 0;
-		//	intern->ref_obj  = NULL;
-		//	intern->acquired = 0;
-		//}
-	//} else {
-
-	//}
 
 	wref->std.handlers = &wr_handler_WeakRef;
 
